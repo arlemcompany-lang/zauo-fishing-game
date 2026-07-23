@@ -1,0 +1,2006 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ざうお新宿店 なつやすみ釣りゲーム</title>
+<style>
+  :root{
+    --sea:#1e6fa8; --sea-deep:#0f4c75; --sand:#f4e2c8; --wood:#8b5a2b;
+    --accent:#ff9f43; --white:#ffffff;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+  html,body{height:100%; margin:0; overflow:hidden; overscroll-behavior:none;}
+  body{
+    font-family:"Hiragino Maru Gothic ProN","Rounded Mplus 1c","Segoe UI",sans-serif;
+    background:linear-gradient(180deg,#bfe6ff 0%,#8fd0f0 40%,var(--sea) 100%);
+    display:flex; align-items:center; justify-content:center;
+    height:100vh; width:100vw; touch-action:none;
+  }
+  #app{
+    position:relative; width:100%; max-width:480px; height:100%;
+    max-height:900px; margin:0 auto; overflow:hidden;
+    display:flex; flex-direction:column;
+  }
+  .screen{
+    position:absolute; inset:0; display:none; flex-direction:column;
+    align-items:center; padding:env(safe-area-inset-top,16px) 16px env(safe-area-inset-bottom,16px);
+    overflow-y:auto;
+  }
+  .screen.active{display:flex;}
+
+  h1.title{
+    color:#fff; text-shadow:0 2px 4px rgba(0,0,0,.3);
+    font-size:22px; text-align:center; margin:12px 0 20px;
+  }
+
+  /* ---- 言語選択 ---- */
+  .lang-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:14px;
+    width:100%; max-width:360px; margin-top:12px;
+  }
+  .lang-btn{
+    background:#fff; border:none; border-radius:18px; padding:22px 8px;
+    box-shadow:0 4px 0 rgba(0,0,0,.15); font-size:17px; font-weight:bold;
+    color:#333; display:flex; flex-direction:column; align-items:center; gap:8px;
+  }
+  .lang-btn .flag{font-size:38px;}
+  .flag-canvas{display:block; border-radius:4px; box-shadow:0 0 0 1px rgba(0,0,0,.18);}
+  .lang-btn:active{transform:translateY(3px); box-shadow:0 1px 0 rgba(0,0,0,.15);}
+
+  /* ---- 共通ボタン ---- */
+  .big-btn{
+    background:var(--accent); color:#fff; border:none; border-radius:26px;
+    padding:16px 40px; font-size:19px; font-weight:bold;
+    box-shadow:0 4px 0 #c9761f; margin:8px;
+  }
+  .big-btn:active{transform:translateY(3px); box-shadow:0 1px 0 #c9761f;}
+  .ghost-btn{
+    background:rgba(255,255,255,.85); color:#555; border:none; border-radius:20px;
+    padding:10px 24px; font-size:15px; font-weight:bold; margin:6px;
+  }
+  .nav-row{display:flex; justify-content:center; margin-top:auto; padding-top:14px; flex-wrap:wrap;}
+
+  /* ---- キャラメイク ---- */
+  .char-preview-wrap{
+    background:radial-gradient(circle at center, #eaf6ff 0%, #d3ecff 70%, transparent 100%);
+    border-radius:20px; padding:8px; margin-top:6px;
+  }
+  #charCanvas{display:block;}
+  .option-block{width:100%; max-width:400px; margin-top:14px;}
+  .option-label{color:#fff; font-size:13px; font-weight:bold; margin:0 0 6px 4px; text-shadow:0 1px 2px rgba(0,0,0,.3);}
+  .option-row{display:flex; gap:10px; flex-wrap:wrap; justify-content:center;}
+  .opt-btn{
+    background:#fff; border:3px solid transparent; border-radius:14px; padding:4px;
+    box-shadow:0 3px 0 rgba(0,0,0,.15);
+  }
+  .opt-btn.selected{border-color:#ff9f43;}
+  .opt-btn canvas{display:block; border-radius:10px;}
+  .swatch{
+    width:44px; height:44px; border-radius:50%; border:3px solid #fff;
+    box-shadow:0 3px 0 rgba(0,0,0,.15);
+  }
+  .swatch.selected{border-color:#ff9f43; transform:scale(1.1);}
+
+  /* ---- 名前入力 ---- */
+  #nameDisplay{
+    background:#fff; border-radius:16px; padding:14px 20px; font-size:26px;
+    letter-spacing:4px; min-width:220px; min-height:40px; text-align:center;
+    box-shadow:0 3px 0 rgba(0,0,0,.15); margin:14px 0; color:#333; font-weight:bold;
+  }
+  #nameDisplay .cursor{opacity:.4;}
+  .voice-btn{
+    background:#ff5c7a; color:#fff; border:none; border-radius:24px;
+    padding:12px 26px; font-size:16px; font-weight:bold;
+    box-shadow:0 4px 0 #c23458; margin:0 0 12px;
+  }
+  .voice-btn:active{transform:translateY(3px); box-shadow:0 1px 0 #c23458;}
+  .voice-btn.listening{animation:voicePulse 1s infinite;}
+  @keyframes voicePulse{
+    0%,100%{transform:scale(1);}
+    50%{transform:scale(1.06);}
+  }
+  .kb-grid{
+    display:grid; gap:6px; width:100%; max-width:420px;
+  }
+  .kb-grid.kana{grid-template-columns:repeat(5,1fr);}
+  .kb-grid.abc{grid-template-columns:repeat(6,1fr);}
+  .kb-key{
+    background:#fff; border:none; border-radius:10px; padding:10px 0;
+    font-size:18px; font-weight:bold; color:#333; box-shadow:0 2px 0 rgba(0,0,0,.15);
+  }
+  .kb-key.empty{background:transparent; box-shadow:none;}
+  .kb-key.wide{grid-column:span 2; background:#ffe0b2;}
+  .kb-key.func{background:#d6e9ff;}
+  .kb-key:active{transform:translateY(2px); box-shadow:none;}
+  .kb-toolrow{display:flex; gap:8px; margin-top:8px; width:100%; max-width:420px; justify-content:center;}
+
+  /* ---- スタート確認 ---- */
+  #startSummary{color:#fff; text-align:center; text-shadow:0 1px 3px rgba(0,0,0,.35);}
+  #startSummary .name{font-size:24px; font-weight:bold; margin:10px 0;}
+  .placeholder-note{
+    background:rgba(255,255,255,.9); border-radius:14px; padding:12px 16px;
+    font-size:13px; color:#555; margin-top:18px; line-height:1.6; max-width:340px;
+  }
+
+  /* ---- マップ画面 ---- */
+  #screen-map{padding:8px; justify-content:flex-start;}
+  #mapWrap{position:relative; margin-top:6px; border-radius:16px; overflow:hidden; box-shadow:0 6px 0 rgba(0,0,0,.2);}
+  #mapCanvas{display:block; touch-action:none;}
+  .map-toast{
+    position:absolute; top:8px; left:50%; transform:translateX(-50%);
+    background:rgba(0,0,0,.55); color:#fff; font-size:12px; padding:6px 12px;
+    border-radius:20px; white-space:nowrap; pointer-events:none; opacity:0; transition:opacity .3s;
+  }
+  .map-toast.show{opacity:1;}
+  .map-actions{
+    position:absolute; left:0; right:0; bottom:14px;
+    display:flex; justify-content:center; gap:12px; pointer-events:none;
+  }
+  .action-btn{
+    pointer-events:auto;
+    background:var(--accent); color:#fff; border:none; border-radius:30px;
+    padding:14px 30px; font-size:17px; font-weight:bold;
+    box-shadow:0 4px 0 #c9761f; opacity:0; transform:translateY(10px);
+    transition:opacity .18s, transform .18s;
+  }
+  .action-btn.show{opacity:1; transform:translateY(0); pointer-events:auto;}
+  .action-btn:not(.show){pointer-events:none;}
+  .action-btn:active{transform:translateY(3px); box-shadow:0 1px 0 #c9761f;}
+  .map-bottom-row{display:flex; gap:10px; margin-top:8px;}
+
+  /* ---- ミニゲーム共通(釣り/宝探し) ---- */
+  .mini-canvas-wrap{
+    border-radius:20px; overflow:hidden; margin-top:10px;
+    box-shadow:0 6px 0 rgba(0,0,0,.2);
+  }
+  .mini-msg{
+    color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.4); font-size:18px;
+    font-weight:bold; text-align:center; margin:16px 0; min-height:26px;
+  }
+  .mini-msg.urgent{color:#fff176; font-size:24px; animation:voicePulse .4s infinite;}
+
+  /* ---- 宝探し: 光るポイント ---- */
+  #peekWrap{position:relative; margin-top:10px; border-radius:20px; overflow:hidden; box-shadow:0 6px 0 rgba(0,0,0,.2);}
+  .glow-spot{
+    position:absolute; width:38px; height:38px; margin:-19px 0 0 -19px;
+    border-radius:50%; border:none; padding:0;
+    background:radial-gradient(circle, #fff9c4 0%, #ffd54f 55%, rgba(255,213,79,0) 75%);
+    box-shadow:0 0 12px 4px rgba(255,235,130,.85);
+    animation:glowPulse 1s infinite;
+  }
+  @keyframes glowPulse{
+    0%,100%{transform:scale(1); opacity:.85;}
+    50%{transform:scale(1.18); opacity:1;}
+  }
+
+  /* ---- イセエビ特別演出 ---- */
+  .gold-flash{
+    position:fixed; inset:0; pointer-events:none; z-index:50;
+    background:radial-gradient(circle at center, rgba(255,223,90,.9) 0%, rgba(255,193,7,.55) 45%, rgba(255,193,7,0) 75%);
+    opacity:0; transition:opacity .35s;
+  }
+  .gold-flash.show{opacity:1;}
+
+  /* ---- 図鑑 ---- */
+  .zukan-grid{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:12px;
+    width:100%; max-width:380px; margin-top:10px;
+  }
+  .zukan-cell{
+    background:rgba(255,255,255,.9); border-radius:16px; padding:8px 4px 10px;
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+    box-shadow:0 3px 0 rgba(0,0,0,.15); opacity:.65;
+  }
+  .zukan-cell.owned{opacity:1; background:#fff;}
+  .zukan-cell canvas{display:block;}
+  .zukan-label{font-size:12px; font-weight:bold; color:#444; text-align:center;}
+  .zukan-complete-badge{
+    margin-top:16px; background:rgba(255,255,255,.95); color:#c9761f;
+    font-size:17px; font-weight:bold; text-align:center; border-radius:16px;
+    padding:14px 18px; box-shadow:0 4px 0 rgba(0,0,0,.15); max-width:340px;
+  }
+  .confetti{
+    position:fixed; top:-20px; width:10px; height:16px; z-index:60;
+    pointer-events:none; animation:confettiFall linear forwards;
+  }
+  @keyframes confettiFall{
+    to{ transform:translateY(110vh) rotate(540deg); opacity:.2; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- 1. 言語選択 -->
+  <div class="screen active" id="screen-lang">
+    <h1 class="title" style="margin-top:40px;">ざうお<br>なつやすみ釣りゲーム</h1>
+    <div class="lang-grid">
+      <button class="lang-btn" data-lang="ja"><span class="flag"><canvas class="flag-canvas" data-flag="ja" width="42" height="28"></canvas></span>にほんご</button>
+      <button class="lang-btn" data-lang="en"><span class="flag"><canvas class="flag-canvas" data-flag="en" width="42" height="28"></canvas></span>English</button>
+      <button class="lang-btn" data-lang="zh"><span class="flag"><canvas class="flag-canvas" data-flag="zh" width="42" height="28"></canvas></span>中文</button>
+      <button class="lang-btn" data-lang="ko"><span class="flag"><canvas class="flag-canvas" data-flag="ko" width="42" height="28"></canvas></span>한국어</button>
+      <button class="lang-btn" data-lang="es"><span class="flag"><canvas class="flag-canvas" data-flag="es" width="42" height="28"></canvas></span>Español</button>
+      <button class="lang-btn" data-lang="it"><span class="flag"><canvas class="flag-canvas" data-flag="it" width="42" height="28"></canvas></span>Italiano</button>
+      <button class="lang-btn" data-lang="vi"><span class="flag"><canvas class="flag-canvas" data-flag="vi" width="42" height="28"></canvas></span>Tiếng Việt</button>
+      <button class="lang-btn" data-lang="tl"><span class="flag"><canvas class="flag-canvas" data-flag="tl" width="42" height="28"></canvas></span>Tagalog</button>
+    </div>
+  </div>
+
+  <!-- 2. キャラメイク -->
+  <div class="screen" id="screen-char">
+    <h1 class="title" data-i18n="charTitle" style="margin-top:6px;"></h1>
+    <div class="char-preview-wrap">
+      <canvas id="charCanvas" width="180" height="220"></canvas>
+    </div>
+
+    <div class="option-block">
+      <div class="option-label" data-i18n="optGender"></div>
+      <div class="option-row" id="row-gender"></div>
+    </div>
+    <div class="option-block">
+      <div class="option-label" data-i18n="optHair"></div>
+      <div class="option-row" id="row-hair"></div>
+    </div>
+    <div class="option-block">
+      <div class="option-label" data-i18n="optHairColor"></div>
+      <div class="option-row" id="row-hairColor"></div>
+    </div>
+    <div class="option-block">
+      <div class="option-label" data-i18n="optSkin"></div>
+      <div class="option-row" id="row-skin"></div>
+    </div>
+    <div class="option-block">
+      <div class="option-label" data-i18n="optCloth"></div>
+      <div class="option-row" id="row-cloth"></div>
+    </div>
+    <div class="option-block">
+      <div class="option-label" data-i18n="optPants"></div>
+      <div class="option-row" id="row-pants"></div>
+    </div>
+
+    <div class="nav-row">
+      <button class="big-btn" id="btnCharNext" data-i18n="next"></button>
+    </div>
+  </div>
+
+  <!-- 3. 名前入力 -->
+  <div class="screen" id="screen-name">
+    <h1 class="title" data-i18n="nameTitle"></h1>
+    <div id="nameDisplay"><span id="nameText"></span><span class="cursor">|</span></div>
+    <button class="voice-btn" id="btnVoice" style="display:none;" data-i18n="voiceBtn"></button>
+    <div id="kbArea"></div>
+    <div class="kb-toolrow">
+      <button class="ghost-btn" id="btnBackspace" data-i18n="delete"></button>
+      <button class="ghost-btn" id="btnSkipName" data-i18n="skip"></button>
+    </div>
+    <div class="nav-row">
+      <button class="big-btn" id="btnNameNext" data-i18n="start"></button>
+    </div>
+  </div>
+
+  <!-- 4. スタート確認 -->
+  <div class="screen" id="screen-start">
+    <canvas id="startCharCanvas" width="150" height="185" style="margin-top:20px;"></canvas>
+    <div id="startSummary">
+      <div class="name" id="startName"></div>
+      <div data-i18n="readyMsg"></div>
+    </div>
+    <div class="placeholder-note" data-i18n="mapPlaceholder"></div>
+    <div class="nav-row">
+      <button class="big-btn" id="btnGoMap" data-i18n="goMap"></button>
+    </div>
+    <div class="nav-row" style="margin-top:0;">
+      <button class="ghost-btn" id="btnRestart" data-i18n="backToTop"></button>
+    </div>
+  </div>
+
+  <!-- 5. マップ(プレースホルダー: 間取り図が届き次第、本番マップへ差し替え) -->
+  <div class="screen" id="screen-map">
+    <div id="mapWrap">
+      <canvas id="mapCanvas"></canvas>
+      <div class="map-toast" id="mapToast" data-i18n="mapPlaceholder"></div>
+      <div class="map-actions">
+        <button class="action-btn" id="btnFish" data-i18n="fishBtn"></button>
+        <button class="action-btn" id="btnPeek" data-i18n="peekBtn"></button>
+      </div>
+    </div>
+    <div class="map-bottom-row">
+      <button class="ghost-btn" id="btnZukan" data-i18n="zukanBtn"></button>
+      <button class="ghost-btn" id="btnMapHome" data-i18n="homeBtn"></button>
+    </div>
+  </div>
+
+  <!-- 6a. 釣りミニゲーム -->
+  <div class="screen" id="screen-fish">
+    <h1 class="title" data-i18n="fishTitle"></h1>
+    <div class="mini-canvas-wrap"><canvas id="fishCanvas" width="280" height="280"></canvas></div>
+    <div class="mini-msg" id="fishMsg"></div>
+    <div class="nav-row" id="fishResultActions" style="display:none;">
+      <button class="big-btn" id="btnFishRetry" data-i18n="retryBtn"></button>
+      <button class="ghost-btn" id="btnFishBack" data-i18n="back"></button>
+    </div>
+    <button class="ghost-btn" id="btnFishCancel" data-i18n="back" style="margin-top:auto;"></button>
+  </div>
+
+  <!-- 6b. 宝探しミニゲーム -->
+  <div class="screen" id="screen-peek">
+    <h1 class="title" data-i18n="peekTitle"></h1>
+    <div id="peekWrap"><canvas id="peekCanvas" width="280" height="280"></canvas></div>
+    <div class="mini-msg" id="peekMsg" data-i18n="peekInstruction"></div>
+    <div class="nav-row" id="peekResultActions" style="display:none;">
+      <button class="big-btn" id="btnPeekRetry" data-i18n="retryBtn"></button>
+      <button class="ghost-btn" id="btnPeekBack" data-i18n="back"></button>
+    </div>
+    <button class="ghost-btn" id="btnPeekCancel" data-i18n="back" style="margin-top:auto;"></button>
+  </div>
+
+  <!-- 7. 図鑑 -->
+  <div class="screen" id="screen-zukan">
+    <h1 class="title" data-i18n="zukanTitle"></h1>
+    <div class="zukan-grid" id="zukanGrid"></div>
+    <div class="zukan-complete-badge" id="zukanComplete" style="display:none;"></div>
+    <div class="nav-row">
+      <button class="ghost-btn" id="btnZukanBack" data-i18n="back"></button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+"use strict";
+
+/* ============ i18n ============ */
+const I18N = {
+  ja:{
+    charTitle:"キャラをつくろう", optGender:"せいべつ", optHair:"かみがた",
+    optHairColor:"かみのいろ", optSkin:"はだのいろ", optCloth:"ふくのいろ", optPants:"したのいろ",
+    next:"つぎへ", back:"もどる", skip:"スキップ", start:"はじめる",
+    nameTitle:"なまえをいれてね", delete:"けす",
+    readyMsg:"じゅんびOK！", backToTop:"さいしょから",
+    mapPlaceholder:"（このマップはかりのものです。てんぽの図面がとどきしだい、ほんばんマップになります）",
+    goMap:"たんけんへ！", fishBtn:"つる", peekBtn:"のぞく",
+    homeBtn:"さいしょから",
+    voiceBtn:"🎤 はなしていれる", voiceListening:"🎤 きいているよ…",
+    zukanBtn:"ずかん", zukanTitle:"ずかん", completeMsg:"ぜんぶコンプリート！すごい！",
+    fishTitle:"つりだ！", fishWaitMsg:"まっててね…", fishNowMsg:"いま！タップ！",
+    fishFailEarlyMsg:"はやすぎ！にげられちゃった…", fishFailLateMsg:"おそかった！にげられちゃった…",
+    reelMsg:"れんぞくタップ！ひっぱって！", fishFailStruggleMsg:"つよくひっぱられて、にげられちゃった…",
+    gotItemTemplate:"{name} ゲット！", retryBtn:"もういちど",
+    peekTitle:"たからさがし", peekInstruction:"ひかってるところをタップ！"
+  },
+  en:{
+    charTitle:"Make your character", optGender:"Gender", optHair:"Hairstyle",
+    optHairColor:"Hair Color", optSkin:"Skin Tone", optCloth:"Outfit Color", optPants:"Bottom Color",
+    next:"Next", back:"Back", skip:"Skip", start:"Start",
+    nameTitle:"Enter your name", delete:"Delete",
+    readyMsg:"Ready to go!", backToTop:"Back to Start",
+    mapPlaceholder:"(This is a placeholder map — the real one will replace it once the store floor plan arrives)",
+    goMap:"Let's Explore!", fishBtn:"Fish", peekBtn:"Look",
+    homeBtn:"Back to Start",
+    voiceBtn:"🎤 Speak", voiceListening:"🎤 Listening…",
+    zukanBtn:"Encyclopedia", zukanTitle:"Encyclopedia", completeMsg:"You collected them all! Amazing!",
+    fishTitle:"Fishing Time!", fishWaitMsg:"Wait for it…", fishNowMsg:"Now! Tap!",
+    fishFailEarlyMsg:"Too early! It got away…", fishFailLateMsg:"Too late! It got away…",
+    reelMsg:"Tap fast! Reel it in!", fishFailStruggleMsg:"It pulled free and got away…",
+    gotItemTemplate:"You got a {name}!", retryBtn:"Try Again",
+    peekTitle:"Treasure Hunt", peekInstruction:"Tap the glowing spot!"
+  },
+  zh:{
+    charTitle:"制作角色", optGender:"性别", optHair:"发型",
+    optHairColor:"发色", optSkin:"肤色", optCloth:"服装颜色", optPants:"下装颜色",
+    next:"下一步", back:"返回", skip:"跳过", start:"开始",
+    nameTitle:"请输入名字", delete:"删除",
+    readyMsg:"准备好了！", backToTop:"回到开头",
+    mapPlaceholder:"（这是临时地图，店铺平面图确定后将替换为正式地图）",
+    goMap:"出发探险！", fishBtn:"钓鱼", peekBtn:"查看",
+    homeBtn:"回到开头",
+    voiceBtn:"🎤 语音输入", voiceListening:"🎤 正在聆听…",
+    zukanBtn:"图鉴", zukanTitle:"图鉴", completeMsg:"全部收集完成！太棒了！",
+    fishTitle:"钓鱼时间！", fishWaitMsg:"等一下…", fishNowMsg:"就是现在！点击！",
+    fishFailEarlyMsg:"太早了！被它跑掉了…", fishFailLateMsg:"太晚了！被它跑掉了…",
+    reelMsg:"快速点击！用力拉！", fishFailStruggleMsg:"它用力挣脱跑掉了…",
+    gotItemTemplate:"获得了{name}！", retryBtn:"再来一次",
+    peekTitle:"寻宝", peekInstruction:"点击发光的地方！"
+  },
+  ko:{
+    charTitle:"캐릭터 만들기", optGender:"성별", optHair:"헤어스타일",
+    optHairColor:"머리색", optSkin:"피부색", optCloth:"옷 색깔", optPants:"하의 색깔",
+    next:"다음", back:"뒤로", skip:"건너뛰기", start:"시작",
+    nameTitle:"이름을 입력하세요", delete:"지우기",
+    readyMsg:"준비 완료!", backToTop:"처음으로",
+    mapPlaceholder:"(이 지도는 임시입니다. 매장 도면이 도착하면 정식 지도로 교체됩니다)",
+    goMap:"탐험 시작!", fishBtn:"낚시", peekBtn:"살펴보기",
+    homeBtn:"처음으로",
+    voiceBtn:"🎤 음성으로 입력", voiceListening:"🎤 듣고 있어요…",
+    zukanBtn:"도감", zukanTitle:"도감", completeMsg:"모두 모았어요! 대단해요!",
+    fishTitle:"낚시 시간!", fishWaitMsg:"기다려 봐요…", fishNowMsg:"지금! 탭!",
+    fishFailEarlyMsg:"너무 빨랐어요! 놓쳤어요…", fishFailLateMsg:"너무 늦었어요! 놓쳤어요…",
+    reelMsg:"빠르게 탭! 잡아당겨요!", fishFailStruggleMsg:"세게 당겨서 놓쳤어요…",
+    gotItemTemplate:"{name} 획득!", retryBtn:"다시하기",
+    peekTitle:"보물찾기", peekInstruction:"빛나는 곳을 탭하세요!"
+  },
+  es:{
+    charTitle:"Crea tu personaje", optGender:"Género", optHair:"Peinado",
+    optHairColor:"Color de pelo", optSkin:"Tono de piel", optCloth:"Color de ropa", optPants:"Color inferior",
+    next:"Siguiente", back:"Atrás", skip:"Saltar", start:"Empezar",
+    nameTitle:"Escribe tu nombre", delete:"Borrar",
+    readyMsg:"¡Listo!", backToTop:"Volver al inicio",
+    mapPlaceholder:"(Este mapa es provisional. Se sustituirá por el mapa real en cuanto llegue el plano de la tienda)",
+    goMap:"¡A explorar!", fishBtn:"Pescar", peekBtn:"Mirar",
+    homeBtn:"Volver al inicio",
+    voiceBtn:"🎤 Hablar", voiceListening:"🎤 Escuchando…",
+    zukanBtn:"Enciclopedia", zukanTitle:"Enciclopedia", completeMsg:"¡Los conseguiste todos! ¡Increíble!",
+    fishTitle:"¡Hora de pescar!", fishWaitMsg:"Espera…", fishNowMsg:"¡Ahora! ¡Toca!",
+    fishFailEarlyMsg:"¡Demasiado pronto! Se escapó…", fishFailLateMsg:"¡Demasiado tarde! Se escapó…",
+    reelMsg:"¡Toca rápido! ¡Tira de la caña!", fishFailStruggleMsg:"¡Tiró fuerte y se escapó!",
+    gotItemTemplate:"¡Conseguiste {name}!", retryBtn:"Otra vez",
+    peekTitle:"Búsqueda del tesoro", peekInstruction:"¡Toca el punto brillante!"
+  },
+  it:{
+    charTitle:"Crea il tuo personaggio", optGender:"Genere", optHair:"Acconciatura",
+    optHairColor:"Colore capelli", optSkin:"Colore pelle", optCloth:"Colore vestito", optPants:"Colore inferiore",
+    next:"Avanti", back:"Indietro", skip:"Salta", start:"Inizia",
+    nameTitle:"Scrivi il tuo nome", delete:"Cancella",
+    readyMsg:"Pronto!", backToTop:"Torna all'inizio",
+    mapPlaceholder:"(Questa è una mappa provvisoria. Sarà sostituita da quella reale non appena arriva la piantina del locale)",
+    goMap:"Si parte!", fishBtn:"Pesca", peekBtn:"Guarda",
+    homeBtn:"Torna all'inizio",
+    voiceBtn:"🎤 Parla", voiceListening:"🎤 Sto ascoltando…",
+    zukanBtn:"Enciclopedia", zukanTitle:"Enciclopedia", completeMsg:"Li hai presi tutti! Fantastico!",
+    fishTitle:"Ora di pesca!", fishWaitMsg:"Aspetta…", fishNowMsg:"Ora! Tocca!",
+    fishFailEarlyMsg:"Troppo presto! È scappato…", fishFailLateMsg:"Troppo tardi! È scappato…",
+    reelMsg:"Tocca veloce! Tira su!", fishFailStruggleMsg:"Ha tirato forte ed è scappato…",
+    gotItemTemplate:"Hai preso: {name}!", retryBtn:"Ancora",
+    peekTitle:"Caccia al tesoro", peekInstruction:"Tocca il punto che brilla!"
+  },
+  vi:{
+    charTitle:"Tạo nhân vật của bạn", optGender:"Giới tính", optHair:"Kiểu tóc",
+    optHairColor:"Màu tóc", optSkin:"Màu da", optCloth:"Màu trang phục", optPants:"Màu phần dưới",
+    next:"Tiếp theo", back:"Quay lại", skip:"Bỏ qua", start:"Bắt đầu",
+    nameTitle:"Nhập tên của bạn", delete:"Xóa",
+    readyMsg:"Sẵn sàng rồi!", backToTop:"Về trang đầu",
+    mapPlaceholder:"(Đây là bản đồ tạm thời. Bản đồ chính thức sẽ thay thế khi có sơ đồ cửa hàng)",
+    goMap:"Cùng khám phá!", fishBtn:"Câu cá", peekBtn:"Xem",
+    homeBtn:"Về trang đầu",
+    voiceBtn:"🎤 Nói để nhập", voiceListening:"🎤 Đang nghe…",
+    zukanBtn:"Bách khoa", zukanTitle:"Bách khoa", completeMsg:"Bạn đã sưu tập đủ tất cả! Tuyệt vời!",
+    fishTitle:"Giờ câu cá!", fishWaitMsg:"Chờ chút nhé…", fishNowMsg:"Ngay bây giờ! Chạm!",
+    fishFailEarlyMsg:"Quá sớm! Nó chạy mất rồi…", fishFailLateMsg:"Quá muộn! Nó chạy mất rồi…",
+    reelMsg:"Chạm liên tục! Kéo lên!", fishFailStruggleMsg:"Nó giật mạnh và trốn mất…",
+    gotItemTemplate:"Bạn đã bắt được {name}!", retryBtn:"Thử lại",
+    peekTitle:"Săn kho báu", peekInstruction:"Chạm vào chỗ phát sáng!"
+  },
+  tl:{
+    charTitle:"Gumawa ng iyong karakter", optGender:"Kasarian", optHair:"Istilo ng buhok",
+    optHairColor:"Kulay ng buhok", optSkin:"Kulay ng balat", optCloth:"Kulay ng damit", optPants:"Kulay ng ibaba",
+    next:"Susunod", back:"Bumalik", skip:"Laktawan", start:"Simulan",
+    nameTitle:"Ilagay ang iyong pangalan", delete:"Burahin",
+    readyMsg:"Handa na!", backToTop:"Bumalik sa simula",
+    mapPlaceholder:"(Pansamantalang mapa ito. Papalitan ito ng tunay na mapa kapag dumating ang floor plan ng tindahan)",
+    goMap:"Mag-explore tayo!", fishBtn:"Mangisda", peekBtn:"Tingnan",
+    homeBtn:"Bumalik sa simula",
+    voiceBtn:"🎤 Magsalita", voiceListening:"🎤 Nakikinig…",
+    zukanBtn:"Ensiklopedya", zukanTitle:"Ensiklopedya", completeMsg:"Nakuha mo lahat! Ang galing!",
+    fishTitle:"Oras ng Pangingisda!", fishWaitMsg:"Maghintay ka…", fishNowMsg:"Ngayon na! I-tap!",
+    fishFailEarlyMsg:"Masyadong maaga! Nakatakas ito…", fishFailLateMsg:"Huli na! Nakatakas ito…",
+    reelMsg:"Mabilis na i-tap! Hilahin mo!", fishFailStruggleMsg:"Humila ito nang malakas at nakatakas…",
+    gotItemTemplate:"Nakuha mo ang {name}!", retryBtn:"Ulitin",
+    peekTitle:"Paghahanap ng Kayamanan", peekInstruction:"I-tap ang kumikislap na lugar!"
+  }
+};
+
+const FISH_NAMES = {
+  tai:{ja:"タイ",en:"Sea Bream",zh:"鲷鱼",ko:"도미",es:"Besugo",it:"Orata",vi:"Cá tráp",tl:"Isdang Tai"},
+  hirame:{ja:"ヒラメ",en:"Flounder",zh:"比目鱼",ko:"광어",es:"Platija",it:"Passera",vi:"Cá bơn",tl:"Dapa"},
+  aji:{ja:"アジ",en:"Horse Mackerel",zh:"竹荚鱼",ko:"전갱이",es:"Chicharro",it:"Suro",vi:"Cá nục",tl:"Alumahan"},
+  shimaaji:{ja:"シマアジ",en:"Striped Jack",zh:"条纹竹荚鱼",ko:"줄전갱이",es:"Palometa rayada",it:"Leccia striata",vi:"Cá cam sọc",tl:"Talakitok na Guhit"},
+  sazae:{ja:"サザエ",en:"Turban Shell",zh:"海螺",ko:"소라",es:"Caracola",it:"Chiocciola di mare",vi:"Ốc đụn",tl:"Susong-dagat"},
+  ebi:{ja:"車海老",en:"Tiger Prawn",zh:"斑节虾",ko:"보리새우",es:"Langostino tigre",it:"Gambero tigre",vi:"Tôm sú",tl:"Hipong Tigre"},
+  ise:{ja:"イセエビ",en:"Spiny Lobster",zh:"龙虾",ko:"닭새우",es:"Langosta espinosa",it:"Aragosta",vi:"Tôm hùm gai",tl:"Banagan"},
+  kasago:{ja:"カサゴ",en:"Scorpionfish",zh:"石狗公",ko:"쏨뱅이",es:"Rascacio",it:"Scorfano",vi:"Cá đá",tl:"Isdang Bato"}
+};
+
+const COLLECTION_ORDER = ["aji","kasago","tai","hirame","shimaaji","sazae","ebi","ise"];
+/* レア度: アジ★1 / カサゴ★2 / タイ・ヒラメ★3 / シマアジ★4(最レア) */
+const FISH_TABLE = [["aji",45],["kasago",25],["tai",12],["hirame",12],["shimaaji",6]];
+const TREASURE_TABLE = [["sazae",60],["ebi",35],["ise",5]];
+function weightedPick(table){
+  const total = table.reduce((s,[,w])=>s+w,0);
+  let r = Math.random()*total;
+  for(const [k,w] of table){ r -= w; if(r <= 0) return k; }
+  return table[table.length-1][0];
+}
+
+const SPECIES_INFO = {
+  aji:{type:"fish", color:"#9fd8ff", accent:"#6fb8e8"},
+  kasago:{type:"fish", color:"#c9705a", accent:"#8a3f2c", spiny:true},
+  shimaaji:{type:"fish", color:"#bfe6c9", accent:"#4c7a55", stripe:true},
+  tai:{type:"fish", color:"#ffb3c1", accent:"#e8607d"},
+  hirame:{type:"flatfish", color:"#c9a06a", accent:"#8a6a3d"},
+  sazae:{type:"shell", color:"#d98a3d", accent:"#a85f22"},
+  ebi:{type:"shrimp", color:"#ff8f6b", accent:"#d85a36"},
+  ise:{type:"shrimp", color:"#ff6b6b", accent:"#c23458", spiny:true}
+};
+
+function drawSpeciesIcon(ctx, w, h, key, silhouette){
+  ctx.clearRect(0,0,w,h);
+  drawSpeciesGraphic(ctx, w, h, key, silhouette);
+}
+
+function drawSpeciesGraphic(ctx, w, h, key, silhouette){
+  const info = SPECIES_INFO[key];
+  const main = silhouette ? "#aab3ba" : info.color;
+  const accent = silhouette ? "#8c959c" : info.accent;
+  ctx.save();
+  ctx.translate(w/2, h/2);
+  if(info.type === "fish" || info.type === "flatfish"){
+    const bw = w*0.34, bh = info.type==="flatfish" ? h*0.24 : h*0.19;
+    ctx.fillStyle = main;
+    ctx.beginPath(); ctx.ellipse(0,0,bw,bh,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(bw*0.85,0); ctx.lineTo(bw*1.35,-bh*0.9); ctx.lineTo(bw*1.35,bh*0.9); ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = silhouette ? "#7a838a" : "#2c2c2c";
+    ctx.beginPath(); ctx.arc(-bw*0.55,-bh*0.15,bh*0.17,0,Math.PI*2); ctx.fill();
+    if(info.stripe && !silhouette){
+      ctx.strokeStyle = accent; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-bw*0.7,-bh*0.5); ctx.lineTo(bw*0.5,bh*0.5); ctx.stroke();
+    }
+    if(info.spiny){
+      ctx.fillStyle = main;
+      for(let i=-2;i<=2;i++){
+        const sx = i*bw*0.28;
+        ctx.beginPath();
+        ctx.moveTo(sx-4, -bh*0.85);
+        ctx.lineTo(sx, -bh*1.4);
+        ctx.lineTo(sx+4, -bh*0.85);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+  } else if(info.type === "shell"){
+    ctx.strokeStyle = main; ctx.lineWidth = w*0.08; ctx.lineCap = "round";
+    const maxA = Math.PI*2*3, maxR = w*0.36;
+    ctx.beginPath();
+    for(let a=0.5; a<=maxA; a+=0.15){
+      const r = (a/maxA)*maxR;
+      const x = Math.cos(a)*r, y = Math.sin(a)*r;
+      if(a===0.5) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+  } else if(info.type === "shrimp"){
+    ctx.fillStyle = main;
+    ctx.beginPath();
+    ctx.arc(0,0,w*0.26,Math.PI*0.15,Math.PI*1.5);
+    ctx.arc(w*0.1,-h*0.05,w*0.15,Math.PI*1.5,Math.PI*2.1);
+    ctx.fill();
+    if(info.spiny && !silhouette){
+      ctx.strokeStyle = accent; ctx.lineWidth = 1.5;
+      for(let i=0;i<5;i++){
+        const ang = -Math.PI*0.6 + i*0.25;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(ang)*w*0.2, Math.sin(ang)*w*0.2);
+        ctx.lineTo(Math.cos(ang)*w*0.36, Math.sin(ang)*w*0.36);
+        ctx.stroke();
+      }
+    }
+  }
+  ctx.restore();
+}
+
+const HAIR_COLORS = ["#2b2320","#6b4423","#d9a441","#8b3a2f"];
+const SKIN_TONES  = ["#ffe0bd","#ffcd94","#eaa970","#c68642"];
+const CLOTH_COLORS= ["#2e86de","#10ac84","#ff9f43","#ff6b9d","#3b4a5a"];
+const BOY_HAIR_STYLES  = ["buzz","sport","medium","curly","longstraight"];
+const GIRL_HAIR_STYLES = ["short","dango","twintail","ponytail","straight","curly"];
+function hairStylesForGender(g){ return g==="girl" ? GIRL_HAIR_STYLES : BOY_HAIR_STYLES; }
+// 性別ごとの初期髪型(男の子=ミディアム、女の子=ロング)
+function defaultHairForGender(g){ return g==="girl" ? "straight" : "sport"; }
+function defaultChar(){ return { gender:"boy", hair:defaultHairForGender("boy"), hairColor:0, skin:0, cloth:0, pants:4 }; }
+
+/* ============ 状態(すべてJS変数のみ。保存処理は一切書かない) ============ */
+const state = {
+  lang:"ja",
+  char: defaultChar(),
+  name:"",
+  collected:{},
+  completeShown:false
+};
+
+/* ============ 画面切替 ============ */
+function showScreen(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+function applyI18n(){
+  const dict = I18N[state.lang];
+  document.querySelectorAll("[data-i18n]").forEach(el=>{
+    const key = el.getAttribute("data-i18n");
+    if(dict[key]) el.textContent = dict[key];
+  });
+}
+
+/* ============ 国旗描画(Windowsの絵文字フォントが国旗絵文字を正しく描画しない機種があるため、
+   すべてCanvas図形で自前生成する。英語(🇺🇸)は絵文字のまま表示できているのでそのまま) ============ */
+function drawStar(ctx, cx, cy, r, rotation){
+  const inner = r * 0.382;
+  ctx.beginPath();
+  for(let i=0;i<10;i++){
+    const rad = i%2===0 ? r : inner;
+    const ang = rotation + i*Math.PI/5;
+    const x = cx + Math.cos(ang)*rad, y = cy + Math.sin(ang)*rad;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawFlagJapan(ctx,w,h){
+  ctx.fillStyle="#fff"; ctx.fillRect(0,0,w,h);
+  ctx.fillStyle="#bc002d";
+  ctx.beginPath(); ctx.arc(w/2,h/2,h*0.32,0,Math.PI*2); ctx.fill();
+}
+
+function drawFlagChina(ctx,w,h){
+  ctx.fillStyle="#de2910"; ctx.fillRect(0,0,w,h);
+  ctx.fillStyle="#ffde00";
+  const bigX=w*0.22, bigY=h*0.32;
+  drawStar(ctx, bigX, bigY, h*0.24, -Math.PI/2);
+  [[w*0.42,h*0.10],[w*0.48,h*0.26],[w*0.45,h*0.44],[w*0.36,h*0.55]].forEach(([sx,sy])=>{
+    const ang = Math.atan2(bigY-sy, bigX-sx) - Math.PI/2;
+    drawStar(ctx, sx, sy, h*0.08, ang);
+  });
+}
+
+function drawTrigram(ctx,x,y,w,barH,gap,pattern){
+  pattern.forEach((solid,i)=>{
+    const yy = y + i*gap;
+    if(solid) ctx.fillRect(x,yy,w,barH);
+    else{ ctx.fillRect(x,yy,w*0.42,barH); ctx.fillRect(x+w*0.58,yy,w*0.42,barH); }
+  });
+}
+
+function drawFlagKorea(ctx,w,h){
+  ctx.fillStyle="#fff"; ctx.fillRect(0,0,w,h);
+  const cx=w/2, cy=h/2, r=h*0.26;
+  ctx.save();
+  ctx.translate(cx,cy); ctx.rotate(Math.PI/4);
+  ctx.fillStyle="#c60c30";
+  ctx.beginPath(); ctx.arc(0,0,r,-Math.PI/2,Math.PI/2); ctx.fill();
+  ctx.fillStyle="#003478";
+  ctx.beginPath(); ctx.arc(0,0,r,Math.PI/2,Math.PI*1.5); ctx.fill();
+  ctx.fillStyle="#003478";
+  ctx.beginPath(); ctx.arc(0,-r/2,r/2,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#c60c30";
+  ctx.beginPath(); ctx.arc(0,r/2,r/2,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+  ctx.fillStyle="#000";
+  const barW=w*0.15, barH=h*0.035, gap=h*0.06;
+  drawTrigram(ctx, w*0.05, h*0.12, barW, barH, gap, [1,1,1]);
+  drawTrigram(ctx, w*0.80, h*0.12, barW, barH, gap, [1,0,1]);
+  drawTrigram(ctx, w*0.05, h*0.72, barW, barH, gap, [0,1,0]);
+  drawTrigram(ctx, w*0.80, h*0.72, barW, barH, gap, [0,0,0]);
+}
+
+function drawFlagUSA(ctx,w,h){
+  const stripeH = h/7;
+  for(let i=0;i<7;i++){
+    ctx.fillStyle = i%2===0 ? "#b22234" : "#fff";
+    ctx.fillRect(0, i*stripeH, w, stripeH);
+  }
+  const cantonW = w*0.42, cantonH = stripeH*4;
+  ctx.fillStyle = "#3c3b6e";
+  ctx.fillRect(0,0,cantonW,cantonH);
+  ctx.fillStyle = "#fff";
+  const cols=5, rows=4;
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const x = cantonW*(c+0.5)/cols, y = cantonH*(r+0.5)/rows;
+      ctx.beginPath(); ctx.arc(x,y,1.3,0,Math.PI*2); ctx.fill();
+    }
+  }
+}
+
+function drawFlagSpain(ctx,w,h){
+  ctx.fillStyle="#c60b1e"; ctx.fillRect(0,0,w,h);
+  ctx.fillStyle="#ffc400"; ctx.fillRect(0,h*0.25,w,h*0.5);
+}
+
+function drawFlagItaly(ctx,w,h){
+  const stripeW = w/3;
+  ctx.fillStyle="#008c45"; ctx.fillRect(0,0,stripeW,h);
+  ctx.fillStyle="#fff"; ctx.fillRect(stripeW,0,stripeW,h);
+  ctx.fillStyle="#cd212a"; ctx.fillRect(stripeW*2,0,stripeW,h);
+}
+
+function drawFlagVietnam(ctx,w,h){
+  ctx.fillStyle="#da251d"; ctx.fillRect(0,0,w,h);
+  ctx.fillStyle="#ff0";
+  drawStar(ctx, w/2, h/2, h*0.32, -Math.PI/2);
+}
+
+function drawFlagPhilippines(ctx,w,h){
+  ctx.fillStyle="#0038a8"; ctx.fillRect(0,0,w,h/2);
+  ctx.fillStyle="#ce1126"; ctx.fillRect(0,h/2,w,h/2);
+  ctx.fillStyle="#fff";
+  ctx.beginPath();
+  ctx.moveTo(0,0); ctx.lineTo(w*0.55,h/2); ctx.lineTo(0,h); ctx.closePath();
+  ctx.fill();
+  const sunX=w*0.19, sunY=h/2, sunR=h*0.11;
+  ctx.fillStyle="#fcd116";
+  ctx.save();
+  ctx.translate(sunX,sunY);
+  for(let i=0;i<8;i++){
+    ctx.rotate(Math.PI/4);
+    ctx.beginPath();
+    ctx.moveTo(-sunR*0.25,0);
+    ctx.lineTo(0,-sunR*1.8);
+    ctx.lineTo(sunR*0.25,0);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+  ctx.beginPath(); ctx.arc(sunX,sunY,sunR*0.55,0,Math.PI*2); ctx.fill();
+  drawStar(ctx, w*0.04, h*0.08, h*0.055, -Math.PI/2);
+  drawStar(ctx, w*0.04, h*0.92, h*0.055, -Math.PI/2);
+  drawStar(ctx, w*0.50, h*0.5, h*0.055, -Math.PI/2);
+}
+
+function drawFlagCanvases(){
+  const map = { en:drawFlagUSA, ja:drawFlagJapan, zh:drawFlagChina, ko:drawFlagKorea, es:drawFlagSpain, it:drawFlagItaly, vi:drawFlagVietnam, tl:drawFlagPhilippines };
+  document.querySelectorAll(".flag-canvas").forEach(c=>{
+    const fn = map[c.getAttribute("data-flag")];
+    if(fn) fn(c.getContext("2d"), c.width, c.height);
+  });
+}
+
+/* ============ キャラクター描画(すべてCanvas図形、画像素材なし) ============ */
+// 左上から光が当たっている想定の疑似3D陰影。球体パーツ(頭・お団子等)はradialで、
+// 円柱・角柱パーツ(腕脚・胴体)はlinearで、それぞれ明暗をつけて立体感を出す
+function sphereFill(ctx, cx, cy, r, base){
+  const g = ctx.createRadialGradient(cx-r*0.38, cy-r*0.42, r*0.1, cx, cy, r*1.05);
+  g.addColorStop(0, hairShade(base, 50));
+  g.addColorStop(0.55, base);
+  g.addColorStop(1, hairShade(base, -35));
+  return g;
+}
+function cylFill(ctx, x0, x1, y, base){
+  const g = ctx.createLinearGradient(x0, y, x1, y);
+  g.addColorStop(0, hairShade(base, -15));
+  g.addColorStop(0.4, hairShade(base, 30));
+  g.addColorStop(1, hairShade(base, -45));
+  return g;
+}
+
+function drawCharacter(ctx, w, h, opts){
+  ctx.clearRect(0,0,w,h);
+  const skin = SKIN_TONES[opts.skin];
+  const hairColor = HAIR_COLORS[opts.hairColor];
+  const cloth = CLOTH_COLORS[opts.cloth];
+  const pants = CLOTH_COLORS[opts.pants];
+  const scale = w/180;
+
+  ctx.save();
+  ctx.scale(scale,scale);
+  const W = 180, H = 220;
+  const ccx = W/2;
+
+  const skinLine = hairShade(skin, -55);
+  const clothLine = hairShade(cloth, -55);
+  const pantsLine = hairShade(pants, -45);
+
+  // 影(地面の落ち影)
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  ctx.beginPath();
+  ctx.ellipse(ccx, 205, 37, 7, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.lineJoin = "round";
+
+  // 脚(性別で形を変える: 男の子=ズボン、女の子=スカート。色は「したのいろ」で選択)
+  if(opts.gender === "girl"){
+    ctx.fillStyle = cylFill(ctx, ccx-42, ccx+42, 170, pants);
+    ctx.strokeStyle = pantsLine; ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(ccx-30, 150);
+    ctx.lineTo(ccx+30, 150);
+    ctx.lineTo(ccx+42, 190);
+    ctx.lineTo(ccx-42, 190);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = skinLine; ctx.lineWidth = 1.4;
+    ctx.fillStyle = cylFill(ctx, ccx-18, ccx-6, 190, skin);
+    ctx.fillRect(ccx-18, 178, 12, 26); ctx.strokeRect(ccx-18, 178, 12, 26);
+    ctx.fillStyle = cylFill(ctx, ccx+6, ccx+18, 190, skin);
+    ctx.fillRect(ccx+6, 178, 12, 26); ctx.strokeRect(ccx+6, 178, 12, 26);
+  } else {
+    ctx.strokeStyle = pantsLine; ctx.lineWidth = 1.6;
+    ctx.fillStyle = cylFill(ctx, ccx-24, ccx-6, 180, pants);
+    ctx.fillRect(ccx-24, 160, 18, 44); ctx.strokeRect(ccx-24, 160, 18, 44);
+    ctx.fillStyle = cylFill(ctx, ccx+6, ccx+24, 180, pants);
+    ctx.fillRect(ccx+6, 160, 18, 44); ctx.strokeRect(ccx+6, 160, 18, 44);
+    ctx.strokeStyle = skinLine; ctx.lineWidth = 1.4;
+    ctx.fillStyle = cylFill(ctx, ccx-24, ccx-6, 200, skin);
+    ctx.fillRect(ccx-24, 196, 18, 10); ctx.strokeRect(ccx-24, 196, 18, 10);
+    ctx.fillStyle = cylFill(ctx, ccx+6, ccx+24, 200, skin);
+    ctx.fillRect(ccx+6, 196, 18, 10); ctx.strokeRect(ccx+6, 196, 18, 10);
+  }
+
+  // 体(服): 縦の円柱として陰影をつけ、裾側にお腹の丸みハイライトを重ねる
+  ctx.fillStyle = cylFill(ctx, ccx-38, ccx+38, 135, cloth);
+  roundRect(ctx, ccx-38, 105, 76, 65, 18);
+  ctx.fill();
+  ctx.strokeStyle = clothLine; ctx.lineWidth = 1.8; ctx.stroke();
+  ctx.save();
+  ctx.globalAlpha = 0.28;
+  ctx.fillStyle = hairShade(cloth, 55);
+  ctx.beginPath(); ctx.ellipse(ccx-14, 122, 12, 20, 0.15, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // 腕(球体寄りの丸みでハイライトをつけ、肩の付け根に軽いAO影)
+  ctx.fillStyle = sphereFill(ctx, ccx-42, 130, 16, skin);
+  ctx.strokeStyle = skinLine; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.ellipse(ccx-42, 135, 11, 20, 0.3, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = sphereFill(ctx, ccx+42, 130, 16, skin);
+  ctx.beginPath(); ctx.ellipse(ccx+42, 135, 11, 20, -0.3, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.save();
+  ctx.globalAlpha = 0.2;
+  ctx.fillStyle = "#000";
+  ctx.beginPath(); ctx.ellipse(ccx-36, 118, 8, 6, 0.3, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(ccx+36, 118, 8, 6, -0.3, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // 首(顎の下にAO影を軽く落として頭との段差を出す)
+  ctx.fillStyle = cylFill(ctx, ccx-10, ccx+10, 104, skin);
+  ctx.fillRect(ccx-10, 95, 20, 18);
+  ctx.save();
+  ctx.globalAlpha = 0.22;
+  ctx.fillStyle = "#000";
+  ctx.beginPath(); ctx.ellipse(ccx, 98, 11, 4, 0, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // 頭(球体グラデーションで立体感)
+  ctx.fillStyle = sphereFill(ctx, ccx, 62, 46, skin);
+  ctx.strokeStyle = skinLine; ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.arc(ccx, 62, 46, 0, Math.PI*2);
+  ctx.fill(); ctx.stroke();
+
+  // 目(小さなハイライトを入れてつやを出す)
+  ctx.fillStyle = "#3a2c20";
+  ctx.beginPath(); ctx.arc(ccx-16, 64, 4.5, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ccx+16, 64, 4.5, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.beginPath(); ctx.arc(ccx-17.5, 62.5, 1.3, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ccx+14.5, 62.5, 1.3, 0, Math.PI*2); ctx.fill();
+  // ほっぺ
+  ctx.fillStyle = "rgba(255,140,140,0.45)";
+  ctx.beginPath(); ctx.arc(ccx-28, 74, 6, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ccx+28, 74, 6, 0, Math.PI*2); ctx.fill();
+  // 口
+  ctx.strokeStyle = "#3a2c20"; ctx.lineWidth = 2.2; ctx.lineCap="round";
+  ctx.beginPath(); ctx.arc(ccx, 74, 8, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke();
+
+  // 髪
+  drawHair(ctx, ccx, opts.hair, hairColor, opts.gender);
+
+  ctx.restore();
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+// 16進カラーを明るく/暗くする(あつもり風の縁取り・ハイライト用)。amtは-255〜255
+function hairShade(hex, amt){
+  const n = parseInt(hex.slice(1),16);
+  let r = (n>>16) + amt, g = ((n>>8)&0xff) + amt, b = (n&0xff) + amt;
+  r = Math.max(0,Math.min(255,r)); g = Math.max(0,Math.min(255,g)); b = Math.max(0,Math.min(255,b));
+  return "#" + ((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
+}
+
+function drawHair(ctx, ccx, style, color, gender){
+  const outline = hairShade(color, -60);
+  const shine   = hairShade(color, 60);
+  ctx.fillStyle = color;
+  ctx.strokeStyle = outline;
+  ctx.lineWidth = 2.4;
+  ctx.lineJoin = "round";
+
+  // 頭頂〜前髪までを1本のパスで描く「おわん型」の髪本体。
+  // 以前は頭頂キャップと前髪キャップを別々の円で重ね塗りしていたため、
+  // 縁取り線が二重になって「帽子をかぶっているような」段差が出ていた。
+  // 1本のパスに統合することで継ぎ目のない自然な輪郭にする
+  function dome(topY, sideY, sideX, bangDipY, bangW){
+    ctx.fillStyle = color; ctx.strokeStyle = outline;
+    ctx.beginPath();
+    ctx.moveTo(ccx-sideX, sideY);
+    ctx.quadraticCurveTo(ccx-sideX-4, topY-10, ccx, topY);
+    ctx.quadraticCurveTo(ccx+sideX+4, topY-10, ccx+sideX, sideY);
+    ctx.quadraticCurveTo(ccx+bangW, (bangDipY+sideY)/2, ccx, bangDipY);
+    ctx.quadraticCurveTo(ccx-bangW, (bangDipY+sideY)/2, ccx-sideX, sideY);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+  }
+  // 横に垂れる毛束をS字ベジェで描く(まっすぐな角柱でなく揺れを出す。側面の房・お団子/ポニーテールの尻尾に共用)
+  function lock(x, topY, w, len, bend){
+    ctx.fillStyle = color; ctx.strokeStyle = outline;
+    const midX = x + bend, botX = x + bend*1.6;
+    ctx.beginPath();
+    ctx.moveTo(x-w/2, topY);
+    ctx.quadraticCurveTo(midX-w/2, topY+len*0.5, botX-w*0.3, topY+len);
+    ctx.quadraticCurveTo(botX, topY+len*1.05, botX+w*0.3, topY+len);
+    ctx.quadraticCurveTo(midX+w/2, topY+len*0.5, x+w/2, topY);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+  }
+  // つやのハイライト(半透明の明るい斑)。フラットな塗りに立体感を足す
+  function shineDab(x, y, w, h, rot){
+    ctx.save();
+    ctx.fillStyle = shine;
+    ctx.globalAlpha = 0.35;
+    ctx.beginPath();
+    ctx.ellipse(x, y, w, h, rot, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+  // お団子(ツインお団子・お団子ヘア用)
+  function bun(x, y, r){
+    ctx.fillStyle = color; ctx.strokeStyle = outline;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.save();
+    ctx.strokeStyle = outline; ctx.lineWidth = 1.2; ctx.globalAlpha = 0.55;
+    ctx.beginPath(); ctx.arc(x, y, r*0.55, 0, Math.PI*1.4); ctx.stroke();
+    ctx.restore();
+  }
+  // 結び目のヘアゴム
+  function tie(x, y){
+    ctx.save();
+    ctx.fillStyle = "#ff6b9d";
+    ctx.strokeStyle = hairShade("#ff6b9d", -60);
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.ellipse(x, y, 9, 6, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+
+  if(style === "buzz"){
+    // 坊主: ごく薄い地肌の丸刈りタッチ+刈り込みの質感ライン(ベースキャップなし)
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.beginPath();
+    ctx.arc(ccx, 58, 45, Math.PI, 0, false);
+    ctx.fill();
+    ctx.globalAlpha = 0.5;
+    ctx.strokeStyle = outline; ctx.lineWidth = 1.2;
+    for(let i=-3;i<=3;i++){
+      ctx.beginPath();
+      ctx.moveTo(ccx+i*11, 20); ctx.lineTo(ccx+i*11, 30);
+      ctx.stroke();
+    }
+    ctx.restore();
+    return;
+  }
+
+  shineDab(ccx-18, 30, 14, 9, -0.3);
+
+  if(style === "sport" || style === "short"){
+    dome(16, 52, 45, 54, 25);
+  } else if(style === "medium"){
+    lock(ccx-45, 50, 13, 40, -7);
+    lock(ccx+45, 50, 13, 40,  7);
+    dome(16, 52, 45, 54, 25); // 房の付け根をおわん型で隠して滑らかにつなげる
+  } else if(style === "longstraight" || style === "straight"){
+    lock(ccx-45, 50, 13, 90, -10);
+    lock(ccx+45, 50, 13, 90,  10);
+    dome(16, 52, 45, 54, 25);
+  } else if(style === "dango"){
+    dome(16, 52, 45, 54, 25);
+    bun(ccx-46, 24, 15);
+    bun(ccx+46, 24, 15);
+  } else if(style === "twintail"){
+    lock(ccx-44, 54, 14, 58, -16);
+    lock(ccx+44, 54, 14, 58,  16);
+    dome(16, 52, 45, 54, 25);
+    tie(ccx-44, 54); tie(ccx+44, 54);
+  } else if(style === "ponytail"){
+    lock(ccx+40, 54, 15, 65, 14);
+    dome(16, 52, 45, 54, 25);
+    tie(ccx+40, 54);
+  } else if(style === "curly"){
+    // ふわふわカール: 大小の円を重ねてボリュームを出す(あつもり風のもこもこ感)
+    // 上段の房のみが共通ベース。目にかかる低い房は男の子は無し、女の子は耳の高さまで下げて配置
+    const puffs = [
+      [-40,20,17],[-20,10,19],[0,6,20],[20,10,19],[40,20,17]
+    ];
+    if(gender === "girl"){
+      puffs.push([-42,48,12],[42,48,12]);
+    }
+    puffs.forEach(([dx,dy,r])=>{
+      ctx.fillStyle = color; ctx.strokeStyle = outline;
+      ctx.beginPath(); ctx.arc(ccx+dx, dy+22, r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    });
+    shineDab(ccx-14, 20, 12, 8, -0.3);
+  }
+
+  if(gender === "girl" && (style === "short" || style === "curly")){
+    ctx.save();
+    ctx.fillStyle = "#ff6b9d";
+    ctx.strokeStyle = hairShade("#ff6b9d", -60);
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(ccx+30,26); ctx.lineTo(ccx+42,20); ctx.lineTo(ccx+42,32); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+}
+
+/* ============ キャラメイク画面 構築 ============ */
+function miniCanvasFor(container, applyOpts){
+  const c = document.createElement("canvas");
+  c.width = 70; c.height = 86;
+  const ctx = c.getContext("2d");
+  const opts = Object.assign({}, state.char, applyOpts);
+  drawCharacter(ctx, 70, 86, opts);
+  return c;
+}
+
+function refreshCharPreview(){
+  const ctx = document.getElementById("charCanvas").getContext("2d");
+  drawCharacter(ctx, 180, 220, state.char);
+}
+
+function buildGenderRow(){
+  const row = document.getElementById("row-gender");
+  row.innerHTML = "";
+  ["boy","girl"].forEach(g=>{
+    const btn = document.createElement("button");
+    btn.className = "opt-btn" + (state.char.gender===g ? " selected":"");
+    const previewCloth = g==="girl" ? 3 : 0;
+    const previewPants = g==="girl" ? 3 : 4;
+    btn.appendChild(miniCanvasFor(row, {gender:g, hair:defaultHairForGender(g), cloth:previewCloth, pants:previewPants}));
+    btn.onclick = ()=>{
+      state.char.gender = g;
+      state.char.hair = defaultHairForGender(g);
+      state.char.cloth = previewCloth;
+      state.char.pants = previewPants;
+      buildGenderRow(); buildHairRow();
+      buildSwatchRow("row-cloth", CLOTH_COLORS, "cloth");
+      buildSwatchRow("row-pants", CLOTH_COLORS, "pants");
+      refreshCharPreview();
+    };
+    row.appendChild(btn);
+  });
+}
+
+function buildHairRow(){
+  const row = document.getElementById("row-hair");
+  row.innerHTML = "";
+  hairStylesForGender(state.char.gender).forEach(h=>{
+    const btn = document.createElement("button");
+    btn.className = "opt-btn" + (state.char.hair===h ? " selected":"");
+    btn.appendChild(miniCanvasFor(row, {hair:h}));
+    btn.onclick = ()=>{ state.char.hair = h; buildHairRow(); refreshCharPreview(); };
+    row.appendChild(btn);
+  });
+}
+
+function buildSwatchRow(rowId, colors, stateKey){
+  const row = document.getElementById(rowId);
+  row.innerHTML = "";
+  colors.forEach((c,i)=>{
+    const btn = document.createElement("button");
+    btn.className = "swatch" + (state.char[stateKey]===i ? " selected":"");
+    btn.style.background = c;
+    btn.onclick = ()=>{ state.char[stateKey] = i; buildSwatchRow(rowId,colors,stateKey); refreshCharPreview(); };
+    row.appendChild(btn);
+  });
+}
+
+function initCharScreen(){
+  buildGenderRow();
+  buildHairRow();
+  buildSwatchRow("row-hairColor", HAIR_COLORS, "hairColor");
+  buildSwatchRow("row-skin", SKIN_TONES, "skin");
+  buildSwatchRow("row-cloth", CLOTH_COLORS, "cloth");
+  buildSwatchRow("row-pants", CLOTH_COLORS, "pants");
+  refreshCharPreview();
+}
+
+/* ============ 名前入力画面 ============ */
+const KANA_BASE = [
+  ["あ","い","う","え","お"],
+  ["か","き","く","け","こ"],
+  ["さ","し","す","せ","そ"],
+  ["た","ち","つ","て","と"],
+  ["な","に","ぬ","ね","の"],
+  ["は","ひ","ふ","へ","ほ"],
+  ["ま","み","む","め","も"],
+  ["や","",  "ゆ","",  "よ"],
+  ["ら","り","る","れ","ろ"],
+  ["わ","",  "を","",  "ん"]
+];
+const KANA_DAKU = [
+  ["が","ぎ","ぐ","げ","ご"],
+  ["ざ","じ","ず","ぜ","ぞ"],
+  ["だ","ぢ","づ","で","ど"],
+  ["ば","び","ぶ","べ","ぼ"],
+  ["ぱ","ぴ","ぷ","ぺ","ぽ"]
+];
+const KANA_SMALL = ["っ","ゃ","ゅ","ょ","ー"];
+
+function buildKanaKeyboard(){
+  const area = document.getElementById("kbArea");
+  area.innerHTML = "";
+
+  const grid = document.createElement("div");
+  grid.className = "kb-grid kana";
+  KANA_BASE.forEach(row=>{
+    row.forEach(ch=>{
+      const k = document.createElement("button");
+      if(ch === ""){ k.className="kb-key empty"; }
+      else{
+        k.className="kb-key";
+        k.textContent = ch;
+        k.onclick = ()=> addChar(ch);
+      }
+      grid.appendChild(k);
+    });
+  });
+  area.appendChild(grid);
+
+  const grid2 = document.createElement("div");
+  grid2.className = "kb-grid kana";
+  grid2.style.marginTop = "6px";
+  KANA_DAKU.forEach(row=>{
+    row.forEach(ch=>{
+      const k = document.createElement("button");
+      k.className="kb-key";
+      k.textContent = ch;
+      k.onclick = ()=> addChar(ch);
+      grid2.appendChild(k);
+    });
+  });
+  area.appendChild(grid2);
+
+  const grid3 = document.createElement("div");
+  grid3.className = "kb-grid kana";
+  grid3.style.marginTop = "6px";
+  KANA_SMALL.forEach(ch=>{
+    const k = document.createElement("button");
+    k.className="kb-key func";
+    k.textContent = ch;
+    k.onclick = ()=> addChar(ch);
+    grid3.appendChild(k);
+  });
+  area.appendChild(grid3);
+}
+
+const ABC_ROWS = [
+  ["A","B","C","D","E","F"],
+  ["G","H","I","J","K","L"],
+  ["M","N","O","P","Q","R"],
+  ["S","T","U","V","W","X"],
+  ["Y","Z"]
+];
+function buildAbcKeyboard(){
+  const area = document.getElementById("kbArea");
+  area.innerHTML = "";
+  const grid = document.createElement("div");
+  grid.className = "kb-grid abc";
+  ABC_ROWS.forEach(row=>{
+    row.forEach(ch=>{
+      const k = document.createElement("button");
+      k.className="kb-key";
+      k.textContent = ch;
+      k.onclick = ()=> addChar(ch);
+      grid.appendChild(k);
+    });
+  });
+  area.appendChild(grid);
+}
+
+function addChar(ch){
+  if(state.name.length >= 6) return;
+  state.name += ch;
+  renderName();
+}
+function renderName(){
+  document.getElementById("nameText").textContent = state.name;
+}
+
+function buildKeyboardForLang(){
+  if(state.lang === "ja") buildKanaKeyboard();
+  else buildAbcKeyboard();
+}
+
+/* ============ 名前入力: 音声入力(対応ブラウザのみ) ============
+   iPhone SafariはWeb Speech API非対応のため、機能検出できた端末にのみボタンを表示する。
+   音声はブラウザ標準の認識機能でテキスト化されるのみで、こちら側では録音データを保持しない。
+*/
+const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+let voiceListening = false;
+
+function bcp47Lang(lang){
+  return { ja:"ja-JP", en:"en-US", zh:"zh-CN", ko:"ko-KR", es:"es-ES", it:"it-IT", vi:"vi-VN", tl:"fil-PH" }[lang] || "en-US";
+}
+
+function updateVoiceButtonVisibility(){
+  document.getElementById("btnVoice").style.display = SpeechRecognitionCtor ? "inline-block" : "none";
+}
+
+function startVoiceInput(){
+  if(!SpeechRecognitionCtor || voiceListening) return;
+  const recognizer = new SpeechRecognitionCtor();
+  const btn = document.getElementById("btnVoice");
+  recognizer.lang = bcp47Lang(state.lang);
+  recognizer.interimResults = false;
+  recognizer.maxAlternatives = 1;
+  voiceListening = true;
+  btn.classList.add("listening");
+  btn.textContent = I18N[state.lang].voiceListening;
+  recognizer.onresult = (e)=>{
+    const transcript = e.results[0][0].transcript.trim().replace(/\s+/g,"");
+    if(transcript) state.name = transcript.slice(0,6);
+    renderName();
+  };
+  recognizer.onerror = ()=>{};
+  recognizer.onend = ()=>{
+    voiceListening = false;
+    btn.classList.remove("listening");
+    btn.textContent = I18N[state.lang].voiceBtn;
+  };
+  recognizer.start();
+}
+
+/* ============ イベント配線 ============ */
+document.querySelectorAll(".lang-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    state.lang = btn.getAttribute("data-lang");
+    applyI18n();
+    initCharScreen();
+    showScreen("screen-char");
+  });
+});
+
+document.getElementById("btnCharNext").addEventListener("click", ()=>{
+  state.name = "";
+  renderName();
+  buildKeyboardForLang();
+  showScreen("screen-name");
+});
+
+document.getElementById("btnBackspace").addEventListener("click", ()=>{
+  state.name = state.name.slice(0,-1);
+  renderName();
+});
+
+document.getElementById("btnVoice").addEventListener("click", startVoiceInput);
+
+document.getElementById("btnSkipName").addEventListener("click", ()=>{
+  state.name = "";
+  goToStart();
+});
+
+document.getElementById("btnNameNext").addEventListener("click", goToStart);
+
+document.getElementById("btnRestart").addEventListener("click", ()=>{
+  // 画面遷移のみ。保存データは存在しないため、変数を初期化して最初へ
+  state.name = "";
+  state.char = defaultChar();
+  state.collected = {};
+  state.completeShown = false;
+  showScreen("screen-lang");
+});
+
+function goToStart(){
+  applyI18n();
+  const dict = I18N[state.lang];
+  const nameEl = document.getElementById("startName");
+  nameEl.textContent = state.name ? state.name : "----";
+  const ctx = document.getElementById("startCharCanvas").getContext("2d");
+  drawCharacter(ctx, 150, 185, state.char);
+  showScreen("screen-start");
+}
+
+/* ============ マップ(フェーズ2: プレースホルダー) ============
+   実店舗の間取り図が届くまでの仮マップ。
+   構造: 外周=歩ける通路(AISLE) → その内側=水路(WATER、釣り場) → 中央=船のデッキ(DECK)
+   水路は北と南の1マスだけ橋(BRIDGE)でつながり、通路とデッキを行き来できる。
+   タイル種別は distance-from-edge (d) で機械的に決めているので、
+   本番マップに差し替える際はこの生成ロジックを間取り図ベースの配列に置き換えるだけでよい。
+*/
+const MAP_COLS = 15, MAP_ROWS = 19, TILE = 26;
+const T = { WALL:0, AISLE:1, WATER:2, DECK:3, KAGO:4, BRIDGE:5 };
+function walkable(t){ return t===T.AISLE || t===T.DECK || t===T.BRIDGE; }
+
+let mapGrid = null;
+const player = { r:0, c:0, px:0, py:0, path:[], moving:false };
+let playerSprite = null;
+
+function buildMapGrid(){
+  const grid = [];
+  for(let r=0;r<MAP_ROWS;r++){
+    const row = [];
+    for(let c=0;c<MAP_COLS;c++){
+      const d = Math.min(r, MAP_ROWS-1-r, c, MAP_COLS-1-c);
+      row.push(d===0 ? T.WALL : d===1 ? T.AISLE : d===2 ? T.WATER : T.DECK);
+    }
+    grid.push(row);
+  }
+  const midC = Math.floor(MAP_COLS/2);
+  grid[2][midC] = T.BRIDGE;
+  grid[MAP_ROWS-3][midC] = T.BRIDGE;
+  grid[1][3] = T.KAGO;
+  grid[1][MAP_COLS-4] = T.KAGO;
+  grid[MAP_ROWS-2][3] = T.KAGO;
+  grid[MAP_ROWS-2][MAP_COLS-4] = T.KAGO;
+  mapGrid = grid;
+}
+
+function bfsPath(sr, sc, tr, tc){
+  if(!walkable(mapGrid[tr][tc])) return null;
+  const key = (r,c)=> r*MAP_COLS+c;
+  const visited = new Set([key(sr,sc)]);
+  const prev = new Map();
+  const queue = [[sr,sc]];
+  let head = 0;
+  while(head < queue.length){
+    const [r,c] = queue[head++];
+    if(r===tr && c===tc) break;
+    for(const [dr,dc] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const nr=r+dr, nc=c+dc;
+      if(nr<0||nc<0||nr>=MAP_ROWS||nc>=MAP_COLS) continue;
+      if(!walkable(mapGrid[nr][nc])) continue;
+      const k = key(nr,nc);
+      if(visited.has(k)) continue;
+      visited.add(k);
+      prev.set(k, [r,c]);
+      queue.push([nr,nc]);
+    }
+  }
+  if(!visited.has(key(tr,tc))) return null;
+  const path = [];
+  let cur = [tr,tc];
+  while(cur[0]!==sr || cur[1]!==sc){
+    path.push(cur);
+    cur = prev.get(key(cur[0],cur[1]));
+  }
+  path.reverse();
+  return path;
+}
+
+function nearestWalkable(r,c){
+  if(r>=0 && c>=0 && r<MAP_ROWS && c<MAP_COLS && walkable(mapGrid[r][c])) return [r,c];
+  let best=null, bestDist=Infinity;
+  for(let rr=0; rr<MAP_ROWS; rr++){
+    for(let cc=0; cc<MAP_COLS; cc++){
+      if(!walkable(mapGrid[rr][cc])) continue;
+      const dist = Math.abs(rr-r)+Math.abs(cc-c);
+      if(dist < bestDist){ bestDist=dist; best=[rr,cc]; }
+    }
+  }
+  return best;
+}
+
+function makePlayerSprite(){
+  const c = document.createElement("canvas");
+  c.width = 60; c.height = 74;
+  drawCharacter(c.getContext("2d"), 60, 74, state.char);
+  playerSprite = c;
+}
+
+const mapCanvas = document.getElementById("mapCanvas");
+const mapCtx = mapCanvas.getContext("2d");
+
+function drawTile(r,c){
+  const t = mapGrid[r][c];
+  const x = c*TILE, y = r*TILE;
+  let fill = "#7fbf6b";
+  if(t===T.WALL) fill = "#5e9a4a";
+  else if(t===T.AISLE) fill = "#e4d3a8";
+  else if(t===T.WATER) fill = "#2f8fc4";
+  else if(t===T.DECK) fill = "#a9722f";
+  else if(t===T.KAGO) fill = "#e4d3a8";
+  else if(t===T.BRIDGE) fill = "#8b5a2b";
+  mapCtx.fillStyle = fill;
+  mapCtx.fillRect(x,y,TILE,TILE);
+
+  if(t===T.WATER){
+    mapCtx.strokeStyle = "rgba(255,255,255,.35)";
+    mapCtx.lineWidth = 1.5;
+    mapCtx.beginPath();
+    mapCtx.moveTo(x+4, y+TILE/2);
+    mapCtx.quadraticCurveTo(x+TILE/2, y+TILE/2-5, x+TILE-4, y+TILE/2);
+    mapCtx.stroke();
+  } else if(t===T.DECK || t===T.BRIDGE){
+    mapCtx.strokeStyle = "rgba(0,0,0,.12)";
+    mapCtx.lineWidth = 1;
+    mapCtx.beginPath();
+    mapCtx.moveTo(x, y+TILE*0.3); mapCtx.lineTo(x+TILE, y+TILE*0.3);
+    mapCtx.moveTo(x, y+TILE*0.7); mapCtx.lineTo(x+TILE, y+TILE*0.7);
+    mapCtx.stroke();
+  } else if(t===T.KAGO){
+    mapCtx.fillStyle = "#8b5a2b";
+    mapCtx.beginPath();
+    mapCtx.ellipse(x+TILE/2, y+TILE/2, TILE*0.34, TILE*0.28, 0, 0, Math.PI*2);
+    mapCtx.fill();
+    mapCtx.strokeStyle = "#5c3a1a"; mapCtx.lineWidth = 2;
+    mapCtx.beginPath(); mapCtx.moveTo(x+TILE*0.2,y+TILE*0.42); mapCtx.lineTo(x+TILE*0.8,y+TILE*0.42); mapCtx.stroke();
+    mapCtx.beginPath(); mapCtx.moveTo(x+TILE*0.2,y+TILE*0.58); mapCtx.lineTo(x+TILE*0.8,y+TILE*0.58); mapCtx.stroke();
+  }
+}
+
+function drawMap(){
+  mapCanvas.width = MAP_COLS*TILE;
+  mapCanvas.height = MAP_ROWS*TILE;
+  for(let r=0;r<MAP_ROWS;r++) for(let c=0;c<MAP_COLS;c++) drawTile(r,c);
+  drawPlayer();
+}
+
+function drawPlayer(){
+  if(!playerSprite) return;
+  const w = TILE*1.9, h = TILE*2.35;
+  mapCtx.drawImage(playerSprite, player.px - w/2, player.py - h*0.82, w, h);
+}
+
+function tileCenter(r,c){ return [c*TILE+TILE/2, r*TILE+TILE/2]; }
+
+function updateActionButtons(){
+  const r = player.r, c = player.c;
+  let nearWater=false, nearKago=false;
+  for(const [dr,dc] of [[1,0],[-1,0],[0,1],[0,-1]]){
+    const nr=r+dr, nc=c+dc;
+    if(nr<0||nc<0||nr>=MAP_ROWS||nc>=MAP_COLS) continue;
+    if(mapGrid[nr][nc]===T.WATER) nearWater=true;
+    if(mapGrid[nr][nc]===T.KAGO) nearKago=true;
+  }
+  document.getElementById("btnFish").classList.toggle("show", nearWater);
+  document.getElementById("btnPeek").classList.toggle("show", nearKago);
+}
+
+let animReq = null;
+function stepAlongPath(){
+  if(player.path.length === 0){
+    player.moving = false;
+    updateActionButtons();
+    return;
+  }
+  player.moving = true;
+  const [nr,nc] = player.path.shift();
+  const [fx,fy] = tileCenter(player.r, player.c);
+  const [tx,ty] = tileCenter(nr, nc);
+  const duration = 200;
+  const start = performance.now();
+  function frame(now){
+    const t = Math.min(1, (now-start)/duration);
+    player.px = fx + (tx-fx)*t;
+    player.py = fy + (ty-fy)*t;
+    drawMap();
+    if(t < 1){
+      animReq = requestAnimationFrame(frame);
+    } else {
+      player.r = nr; player.c = nc;
+      stepAlongPath();
+    }
+  }
+  animReq = requestAnimationFrame(frame);
+}
+
+function movePlayerTo(r,c){
+  if(player.moving) return;
+  const target = nearestWalkable(r,c);
+  if(!target) return;
+  const path = bfsPath(player.r, player.c, target[0], target[1]);
+  if(!path || path.length===0) return;
+  player.path = path;
+  stepAlongPath();
+}
+
+mapCanvas.addEventListener("click", (e)=>{
+  const rect = mapCanvas.getBoundingClientRect();
+  const scaleX = mapCanvas.width / rect.width;
+  const scaleY = mapCanvas.height / rect.height;
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
+  const c = Math.floor(x/TILE), r = Math.floor(y/TILE);
+  if(r<0||c<0||r>=MAP_ROWS||c>=MAP_COLS) return;
+  movePlayerTo(r,c);
+});
+
+function showToast(msg){
+  const el = document.getElementById("mapToast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=> el.classList.remove("show"), 2200);
+}
+
+document.getElementById("btnFish").addEventListener("click", ()=>{
+  showScreen("screen-fish");
+  startFishing();
+});
+document.getElementById("btnPeek").addEventListener("click", ()=>{
+  showScreen("screen-peek");
+  startPeek();
+});
+document.getElementById("btnZukan").addEventListener("click", ()=>{
+  buildZukanGrid();
+  showScreen("screen-zukan");
+});
+document.getElementById("btnZukanBack").addEventListener("click", ()=>{
+  showScreen("screen-map");
+});
+
+document.getElementById("btnGoMap").addEventListener("click", ()=>{
+  buildMapGrid();
+  makePlayerSprite();
+  const midC = Math.floor(MAP_COLS/2);
+  player.r = MAP_ROWS-2; player.c = midC;
+  [player.px, player.py] = tileCenter(player.r, player.c);
+  player.path = []; player.moving = false;
+  applyI18n();
+  showScreen("screen-map");
+  drawMap();
+  updateActionButtons();
+  showToast(I18N[state.lang].mapPlaceholder);
+});
+
+document.getElementById("btnMapHome").addEventListener("click", ()=>{
+  if(animReq) cancelAnimationFrame(animReq);
+  state.name = "";
+  state.char = defaultChar();
+  state.collected = {};
+  state.completeShown = false;
+  showScreen("screen-lang");
+});
+
+/* ============ 図鑑 ============ */
+function buildZukanGrid(){
+  const grid = document.getElementById("zukanGrid");
+  grid.innerHTML = "";
+  const dict = I18N[state.lang];
+  COLLECTION_ORDER.forEach(key=>{
+    const owned = !!state.collected[key];
+    const cell = document.createElement("div");
+    cell.className = "zukan-cell" + (owned ? " owned" : "");
+    const c = document.createElement("canvas");
+    c.width = 72; c.height = 72;
+    drawSpeciesIcon(c.getContext("2d"), 72, 72, key, !owned);
+    cell.appendChild(c);
+    const label = document.createElement("div");
+    label.className = "zukan-label";
+    label.textContent = owned ? FISH_NAMES[key][state.lang] : "？？？";
+    cell.appendChild(label);
+    grid.appendChild(cell);
+  });
+  const allCaught = COLLECTION_ORDER.every(k=>state.collected[k]);
+  const badge = document.getElementById("zukanComplete");
+  if(allCaught){
+    badge.style.display = "block";
+    badge.textContent = dict.completeMsg;
+    if(!state.completeShown){ state.completeShown = true; launchConfetti(); }
+  } else {
+    badge.style.display = "none";
+  }
+}
+
+function launchConfetti(){
+  const colors = ["#ff9f43","#ff5c7a","#2e86de","#10ac84","#ffd54f"];
+  for(let i=0;i<40;i++){
+    const el = document.createElement("div");
+    el.className = "confetti";
+    el.style.left = Math.random()*100 + "vw";
+    el.style.background = colors[i % colors.length];
+    el.style.animationDuration = (2.2 + Math.random()*1.4) + "s";
+    el.style.animationDelay = (Math.random()*0.6) + "s";
+    document.body.appendChild(el);
+    setTimeout(()=> el.remove(), 4500);
+  }
+}
+
+function goldFlash(){
+  const el = document.createElement("div");
+  el.className = "gold-flash";
+  document.getElementById("app").appendChild(el);
+  requestAnimationFrame(()=> el.classList.add("show"));
+  setTimeout(()=>{
+    el.classList.remove("show");
+    setTimeout(()=> el.remove(), 600);
+  }, 900);
+}
+
+/* ============ フェーズ3: 釣りミニゲーム ============ */
+const fishCanvas = document.getElementById("fishCanvas");
+const fishCtx = fishCanvas.getContext("2d");
+const FISH_BITE_WINDOW = 900;
+const REEL_START_GAUGE = 40;
+const REEL_TIMEOUT = 10000;
+/* base: 引きの平均の強さ(ゲージ減少/秒)。amp: 波の振れ幅(base±ampで強弱)。
+   period: 一往復にかかる秒数(短いほど強弱の切り替えが速い)。
+   レア度が上がるほどamp・periodを強くし、「強く引かれてゲージが減る」「一瞬ゆるんでゲージが戻る」の
+   振れ幅を大きくして駆け引きを難しくする。amp>=baseの魚は一瞬マイナス減衰(=ゲージが自然回復)になる瞬間がある */
+const FISH_FIGHT = {
+  aji:      { gain:22, base:10, amp:0,  period:1.0 },
+  kasago:   { gain:20, base:12, amp:8,  period:1.6 },
+  tai:      { gain:18, base:14, amp:18, period:1.3 },
+  hirame:   { gain:18, base:14, amp:18, period:1.1 },
+  shimaaji: { gain:16, base:16, amp:22, period:0.9 }
+};
+/* レア度が高いほど跳ねる演出を派手にする(ジャンプの高さ・キラキラの数) */
+const FISH_RARITY = { aji:1, kasago:2, tai:3, hirame:3, shimaaji:4 };
+let fishAnim = null;
+let fishState = "idle";
+let fishWaitStart = 0, fishWaitDuration = 0, fishBiteStart = 0;
+let fishGauge = 0, fishPendingKey = null, fishLastFrameTime = 0, fishReelStart = 0, fishReelPhase = 0;
+
+function drawFishScene(bobY, showExclaim){
+  const w = fishCanvas.width, h = fishCanvas.height;
+  fishCtx.clearRect(0,0,w,h);
+  const grad = fishCtx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0,"#8fd0f0"); grad.addColorStop(1,"#0f4c75");
+  fishCtx.fillStyle = grad; fishCtx.fillRect(0,0,w,h);
+  fishCtx.strokeStyle = "rgba(255,255,255,.25)"; fishCtx.lineWidth = 2;
+  for(let i=0;i<4;i++){
+    const y = h*0.2 + i*h*0.18;
+    fishCtx.beginPath();
+    for(let x=0;x<=w;x+=10){
+      const yy = y + Math.sin((x/28) + (performance.now()/700) + i)*4;
+      if(x===0) fishCtx.moveTo(x,yy); else fishCtx.lineTo(x,yy);
+    }
+    fishCtx.stroke();
+  }
+  const lineX = w/2;
+  fishCtx.strokeStyle = "rgba(255,255,255,.7)"; fishCtx.lineWidth = 1.5;
+  fishCtx.beginPath(); fishCtx.moveTo(lineX,0); fishCtx.lineTo(lineX,bobY); fishCtx.stroke();
+  fishCtx.beginPath(); fishCtx.arc(lineX,bobY,10,0,Math.PI*2);
+  fishCtx.fillStyle = "#fff"; fishCtx.fill();
+  fishCtx.beginPath(); fishCtx.arc(lineX,bobY-4,10,Math.PI,0);
+  fishCtx.fillStyle = "#ff4444"; fishCtx.fill();
+  if(showExclaim){
+    fishCtx.fillStyle = "#fff176"; fishCtx.font = "bold 34px sans-serif"; fishCtx.textAlign = "center";
+    fishCtx.fillText("！", lineX+30, bobY-14);
+  }
+}
+
+function currentDecayRate(fight, elapsedSec){
+  return fight.base + fight.amp * Math.sin((Math.PI*2*elapsedSec/fight.period) + fishReelPhase);
+}
+
+function drawReelScene(gauge, intensity){
+  const w = fishCanvas.width, h = fishCanvas.height;
+  fishCtx.clearRect(0,0,w,h);
+  const grad = fishCtx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0,"#8fd0f0"); grad.addColorStop(1,"#0f4c75");
+  fishCtx.fillStyle = grad; fishCtx.fillRect(0,0,w,h);
+
+  const shake = 4 + intensity*14;
+  const jx = (Math.random()-0.5)*shake, jy = (Math.random()-0.5)*shake;
+  fishCtx.save();
+  fishCtx.translate(w/2 - 45 + jx, h*0.36 - 45 + jy);
+  drawSpeciesGraphic(fishCtx, 90, 90, fishPendingKey, true);
+  fishCtx.restore();
+
+  const barW = w*0.78, barH = 26, barX = (w-barW)/2, barY = h*0.78;
+  fishCtx.fillStyle = "rgba(255,255,255,.35)";
+  roundRect(fishCtx, barX, barY, barW, barH, 13); fishCtx.fill();
+  const fillW = barW * Math.max(0,Math.min(100,gauge))/100;
+  if(fillW > 0){
+    const g2 = fishCtx.createLinearGradient(barX,0,barX+barW,0);
+    if(intensity > 0.55){
+      g2.addColorStop(0,"#ff5c5c"); g2.addColorStop(1,"#ff9f43");
+    } else {
+      g2.addColorStop(0,"#ff9f43"); g2.addColorStop(1,"#ffd54f");
+    }
+    fishCtx.fillStyle = g2;
+    roundRect(fishCtx, barX, barY, fillW, barH, 13); fishCtx.fill();
+  }
+  fishCtx.strokeStyle = intensity > 0.55 ? "#ff5c5c" : "rgba(255,255,255,.85)";
+  fishCtx.lineWidth = 2;
+  roundRect(fishCtx, barX, barY, barW, barH, 13); fishCtx.stroke();
+}
+
+function drawStar(ctx, cx, cy, r, rotation, alpha){
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rotation);
+  ctx.beginPath();
+  for(let i=0;i<5;i++){
+    const outerA = -Math.PI/2 + i*(Math.PI*2/5);
+    const innerA = outerA + Math.PI/5;
+    const ox = Math.cos(outerA)*r, oy = Math.sin(outerA)*r;
+    const ix = Math.cos(innerA)*r*0.45, iy = Math.sin(innerA)*r*0.45;
+    if(i===0) ctx.moveTo(ox,oy); else ctx.lineTo(ox,oy);
+    ctx.lineTo(ix,iy);
+  }
+  ctx.closePath();
+  ctx.fillStyle = `rgba(255,213,79,${alpha})`;
+  ctx.fill();
+  ctx.restore();
+}
+
+/* 釣り上げ演出: 魚が水面から跳ねて、色付きの姿で見得を切る。レア度が高いほど跳躍・キラキラが派手になる */
+function playCatchReveal(key, onDone){
+  const w = fishCanvas.width, h = fishCanvas.height;
+  const rarity = FISH_RARITY[key] || 1;
+  const duration = 1300;
+  const jumpPhase = 0.42;
+  const waterY = h*0.72, centerX = w/2;
+  const jumpHeight = 55 + rarity*16;
+  const start = performance.now();
+
+  const drops = [];
+  const numDrops = 6 + rarity*3;
+  for(let i=0;i<numDrops;i++){
+    drops.push({
+      vx: (Math.random()-0.5)*160,
+      vy: -(90+Math.random()*90),
+      delay: Math.random()*0.08
+    });
+  }
+  const sparkles = [];
+  const numSparkles = rarity + 2;
+  for(let i=0;i<numSparkles;i++){
+    sparkles.push({
+      angle: (i/numSparkles)*Math.PI*2 + Math.random()*0.5,
+      r: 38 + Math.random()*22,
+      spin: Math.random()*Math.PI,
+      delay: Math.random()*0.25
+    });
+  }
+
+  if(rarity >= 4) goldFlash();
+
+  function frame(now){
+    const t = Math.min(1, (now-start)/duration);
+    fishCtx.clearRect(0,0,w,h);
+    const grad = fishCtx.createLinearGradient(0,0,0,h);
+    grad.addColorStop(0,"#8fd0f0"); grad.addColorStop(1,"#0f4c75");
+    fishCtx.fillStyle = grad; fishCtx.fillRect(0,0,w,h);
+    fishCtx.fillStyle = "rgba(255,255,255,.12)";
+    fishCtx.fillRect(0, waterY, w, h-waterY);
+
+    if(t < jumpPhase){
+      const ringT = t/jumpPhase;
+      fishCtx.strokeStyle = `rgba(255,255,255,${1-ringT})`;
+      fishCtx.lineWidth = 3;
+      for(let r=0;r<2;r++){
+        const rad = (ringT+r*0.35) * (26+rarity*6);
+        if(rad <= 0) continue;
+        fishCtx.beginPath();
+        fishCtx.ellipse(centerX, waterY, rad, rad*0.35, 0, 0, Math.PI*2);
+        fishCtx.stroke();
+      }
+    }
+
+    const tSec = t*duration/1000;
+    drops.forEach(d=>{
+      const dt = Math.max(0, tSec-d.delay);
+      if(dt<=0 || dt>0.9) return;
+      const x = centerX + d.vx*dt;
+      const y = waterY + d.vy*dt + 260*dt*dt;
+      if(y > waterY) return;
+      fishCtx.fillStyle = `rgba(255,255,255,${Math.max(0,1-dt/0.9)})`;
+      fishCtx.beginPath(); fishCtx.arc(x,y,2.5,0,Math.PI*2); fishCtx.fill();
+    });
+
+    let fishY, fishScale, fishRot;
+    if(t < jumpPhase){
+      const t2 = t/jumpPhase;
+      fishY = waterY - jumpHeight*Math.sin(t2*Math.PI/2);
+      fishScale = 0.6 + 0.7*t2;
+      fishRot = Math.sin(t2*Math.PI*3)*0.35*(1-t2);
+    } else {
+      const t3 = (t-jumpPhase)/(1-jumpPhase);
+      fishY = (waterY - jumpHeight) - Math.sin(t3*Math.PI)*4;
+      fishScale = 1.3 + Math.sin(t3*Math.PI*2)*0.03;
+      fishRot = Math.sin(t3*Math.PI*4)*0.04;
+    }
+    fishCtx.save();
+    fishCtx.translate(centerX, fishY);
+    fishCtx.rotate(fishRot);
+    const size = 100*fishScale;
+    fishCtx.translate(-size/2, -size/2);
+    drawSpeciesGraphic(fishCtx, size, size, key, false);
+    fishCtx.restore();
+
+    if(t >= jumpPhase){
+      const t3 = (t-jumpPhase)/(1-jumpPhase);
+      sparkles.forEach(s=>{
+        const sT = Math.max(0, Math.min(1, (t3 - s.delay)/(1-s.delay)));
+        if(sT<=0) return;
+        const alpha = sT < 0.7 ? sT/0.7 : Math.max(0,1-(sT-0.7)/0.3);
+        const rad = s.r * (0.4+0.6*sT);
+        const sx = centerX + Math.cos(s.angle)*rad;
+        const sy = fishY + Math.sin(s.angle)*rad*0.7;
+        drawStar(fishCtx, sx, sy, 7, s.spin+sT*2, alpha);
+      });
+    }
+
+    if(t < 1){
+      fishAnim = requestAnimationFrame(frame);
+    } else {
+      onDone();
+    }
+  }
+  fishAnim = requestAnimationFrame(frame);
+}
+
+function beginReeling(){
+  fishState = "reeling";
+  fishPendingKey = weightedPick(FISH_TABLE);
+  fishGauge = REEL_START_GAUGE;
+  fishReelStart = performance.now();
+  fishLastFrameTime = fishReelStart;
+  fishReelPhase = Math.random()*Math.PI*2;
+  const msgEl = document.getElementById("fishMsg");
+  msgEl.textContent = I18N[state.lang].reelMsg;
+  msgEl.classList.add("urgent");
+}
+
+function fishLoop(now){
+  if(fishState === "waiting"){
+    const elapsed = now - fishWaitStart;
+    const bobY = 90 + Math.sin(now/260)*6;
+    drawFishScene(bobY, false);
+    if(elapsed >= fishWaitDuration){
+      fishState = "bite";
+      fishBiteStart = now;
+      const msgEl = document.getElementById("fishMsg");
+      msgEl.textContent = I18N[state.lang].fishNowMsg;
+      msgEl.classList.add("urgent");
+    }
+    fishAnim = requestAnimationFrame(fishLoop);
+  } else if(fishState === "bite"){
+    drawFishScene(130, true);
+    if(now - fishBiteStart > FISH_BITE_WINDOW){
+      endFishing(false, "late");
+      return;
+    }
+    fishAnim = requestAnimationFrame(fishLoop);
+  } else if(fishState === "reeling"){
+    const dt = (now - fishLastFrameTime) / 1000;
+    fishLastFrameTime = now;
+    const fight = FISH_FIGHT[fishPendingKey];
+    const elapsedSec = (now - fishReelStart) / 1000;
+    const rate = currentDecayRate(fight, elapsedSec);
+    const intensity = fight.amp > 0 ? Math.max(0, Math.min(1, (rate - (fight.base-fight.amp)) / (fight.amp*2))) : 0;
+    fishGauge = Math.max(0, Math.min(100, fishGauge - rate*dt));
+    drawReelScene(fishGauge, intensity);
+    if(fishGauge >= 100){ endFishing(true); return; }
+    if(fishGauge <= 0 || now - fishReelStart > REEL_TIMEOUT){ endFishing(false, "struggle"); return; }
+    fishAnim = requestAnimationFrame(fishLoop);
+  }
+}
+
+function startFishing(){
+  fishState = "waiting";
+  fishWaitStart = performance.now();
+  fishWaitDuration = 2000 + Math.random()*4000;
+  fishGauge = 0;
+  fishPendingKey = null;
+  const msgEl = document.getElementById("fishMsg");
+  msgEl.textContent = I18N[state.lang].fishWaitMsg;
+  msgEl.classList.remove("urgent");
+  document.getElementById("fishResultActions").style.display = "none";
+  document.getElementById("btnFishCancel").style.display = "inline-block";
+  if(fishAnim) cancelAnimationFrame(fishAnim);
+  fishAnim = requestAnimationFrame(fishLoop);
+}
+
+function endFishing(success, reason){
+  if(fishAnim) cancelAnimationFrame(fishAnim);
+  fishState = "idle";
+  const dict = I18N[state.lang];
+  const msgEl = document.getElementById("fishMsg");
+  msgEl.classList.remove("urgent");
+  document.getElementById("btnFishCancel").style.display = "none";
+  if(success){
+    const key = fishPendingKey;
+    state.collected[key] = true;
+    msgEl.textContent = "";
+    document.getElementById("fishResultActions").style.display = "none";
+    playCatchReveal(key, ()=>{
+      msgEl.textContent = dict.gotItemTemplate.replace("{name}", FISH_NAMES[key][state.lang]);
+      document.getElementById("fishResultActions").style.display = "flex";
+    });
+  } else {
+    document.getElementById("fishResultActions").style.display = "flex";
+    if(reason === "early"){
+      msgEl.textContent = dict.fishFailEarlyMsg;
+    } else if(reason === "struggle"){
+      msgEl.textContent = dict.fishFailStruggleMsg;
+    } else {
+      msgEl.textContent = dict.fishFailLateMsg;
+    }
+  }
+}
+
+fishCanvas.addEventListener("pointerdown", ()=>{
+  if(fishState === "waiting") endFishing(false, "early");
+  else if(fishState === "bite") beginReeling();
+  else if(fishState === "reeling"){
+    fishGauge = Math.min(100, fishGauge + FISH_FIGHT[fishPendingKey].gain);
+    if(fishGauge >= 100) endFishing(true);
+  }
+});
+
+document.getElementById("btnFishCancel").addEventListener("click", ()=>{
+  if(fishAnim) cancelAnimationFrame(fishAnim);
+  fishState = "idle";
+  showScreen("screen-map");
+});
+document.getElementById("btnFishBack").addEventListener("click", ()=> showScreen("screen-map"));
+document.getElementById("btnFishRetry").addEventListener("click", startFishing);
+
+/* ============ フェーズ3: 宝探しミニゲーム ============ */
+const peekCanvas = document.getElementById("peekCanvas");
+const peekCtx = peekCanvas.getContext("2d");
+
+function drawPeekScene(){
+  const w = peekCanvas.width, h = peekCanvas.height;
+  peekCtx.clearRect(0,0,w,h);
+  const grad = peekCtx.createRadialGradient(w/2,h/2,20,w/2,h/2,w/2);
+  grad.addColorStop(0,"#2f8fc4"); grad.addColorStop(1,"#0f4c75");
+  peekCtx.fillStyle = grad; peekCtx.fillRect(0,0,w,h);
+  peekCtx.fillStyle = "rgba(228,211,168,.5)";
+  for(let i=0;i<10;i++){
+    const x = Math.random()*w, y = Math.random()*h;
+    peekCtx.beginPath(); peekCtx.ellipse(x,y,10,5,Math.random()*Math.PI,0,Math.PI*2); peekCtx.fill();
+  }
+}
+
+function startPeek(){
+  drawPeekScene();
+  document.getElementById("peekResultActions").style.display = "none";
+  document.getElementById("btnPeekCancel").style.display = "inline-block";
+  const msgEl = document.getElementById("peekMsg");
+  msgEl.textContent = I18N[state.lang].peekInstruction;
+  const wrap = document.getElementById("peekWrap");
+  wrap.querySelectorAll(".glow-spot").forEach(e=> e.remove());
+  const used = [];
+  for(let i=0;i<3;i++){
+    let x,y,ok;
+    let tries = 0;
+    do{
+      x = 12 + Math.random()*76; y = 12 + Math.random()*76; ok = true;
+      for(const u of used){ if(Math.hypot(u.x-x, u.y-y) < 22) ok = false; }
+      tries++;
+    } while(!ok && tries < 30);
+    used.push({x,y});
+    const btn = document.createElement("button");
+    btn.className = "glow-spot";
+    btn.style.left = x + "%"; btn.style.top = y + "%";
+    btn.addEventListener("click", handlePeekTap);
+    wrap.appendChild(btn);
+  }
+}
+
+function handlePeekTap(){
+  document.getElementById("peekWrap").querySelectorAll(".glow-spot").forEach(e=> e.remove());
+  document.getElementById("btnPeekCancel").style.display = "none";
+  document.getElementById("peekResultActions").style.display = "flex";
+  const key = weightedPick(TREASURE_TABLE);
+  state.collected[key] = true;
+  const dict = I18N[state.lang];
+  document.getElementById("peekMsg").textContent = dict.gotItemTemplate.replace("{name}", FISH_NAMES[key][state.lang]);
+  if(key === "ise") goldFlash();
+}
+
+document.getElementById("btnPeekCancel").addEventListener("click", ()=> showScreen("screen-map"));
+document.getElementById("btnPeekBack").addEventListener("click", ()=> showScreen("screen-map"));
+document.getElementById("btnPeekRetry").addEventListener("click", startPeek);
+
+drawFlagCanvases();
+updateVoiceButtonVisibility();
+applyI18n();
+</script>
+</body>
+</html>
