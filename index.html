@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>ざうお新宿店 なつやすみ釣りゲーム</title>
+<title>ざうお目黒店 なつやすみ釣りゲーム</title>
 <style>
   :root{
     --sea:#1e6fa8; --sea-deep:#0f4c75; --sand:#f4e2c8; --wood:#8b5a2b;
@@ -291,7 +291,6 @@
       <div class="name" id="startName"></div>
       <div data-i18n="readyMsg"></div>
     </div>
-    <div class="placeholder-note" data-i18n="mapPlaceholder"></div>
     <div class="nav-row">
       <button class="big-btn" id="btnGoMap" data-i18n="goMap"></button>
     </div>
@@ -300,11 +299,11 @@
     </div>
   </div>
 
-  <!-- 5. マップ(プレースホルダー: 間取り図が届き次第、本番マップへ差し替え) -->
+  <!-- 5. マップ(本番: 目黒店の間取り図ベース) -->
   <div class="screen" id="screen-map">
     <div id="mapWrap">
       <canvas id="mapCanvas"></canvas>
-      <div class="map-toast" id="mapToast" data-i18n="mapPlaceholder"></div>
+      <div class="map-toast" id="mapToast"></div>
       <div class="map-actions">
         <button class="action-btn" id="btnFish" data-i18n="fishBtn"></button>
         <button class="action-btn" id="btnPeek" data-i18n="peekBtn"></button>
@@ -363,7 +362,6 @@ const I18N = {
     next:"つぎへ", back:"もどる", skip:"スキップ", start:"はじめる",
     nameTitle:"なまえをいれてね", delete:"けす",
     readyMsg:"じゅんびOK！", backToTop:"さいしょから",
-    mapPlaceholder:"（このマップはかりのものです。てんぽの図面がとどきしだい、ほんばんマップになります）",
     goMap:"たんけんへ！", fishBtn:"つる", peekBtn:"のぞく",
     homeBtn:"さいしょから",
     voiceBtn:"🎤 はなしていれる", voiceListening:"🎤 きいているよ…",
@@ -380,7 +378,6 @@ const I18N = {
     next:"Next", back:"Back", skip:"Skip", start:"Start",
     nameTitle:"Enter your name", delete:"Delete",
     readyMsg:"Ready to go!", backToTop:"Back to Start",
-    mapPlaceholder:"(This is a placeholder map — the real one will replace it once the store floor plan arrives)",
     goMap:"Let's Explore!", fishBtn:"Fish", peekBtn:"Look",
     homeBtn:"Back to Start",
     voiceBtn:"🎤 Speak", voiceListening:"🎤 Listening…",
@@ -397,7 +394,6 @@ const I18N = {
     next:"下一步", back:"返回", skip:"跳过", start:"开始",
     nameTitle:"请输入名字", delete:"删除",
     readyMsg:"准备好了！", backToTop:"回到开头",
-    mapPlaceholder:"（这是临时地图，店铺平面图确定后将替换为正式地图）",
     goMap:"出发探险！", fishBtn:"钓鱼", peekBtn:"查看",
     homeBtn:"回到开头",
     voiceBtn:"🎤 语音输入", voiceListening:"🎤 正在聆听…",
@@ -414,7 +410,6 @@ const I18N = {
     next:"다음", back:"뒤로", skip:"건너뛰기", start:"시작",
     nameTitle:"이름을 입력하세요", delete:"지우기",
     readyMsg:"준비 완료!", backToTop:"처음으로",
-    mapPlaceholder:"(이 지도는 임시입니다. 매장 도면이 도착하면 정식 지도로 교체됩니다)",
     goMap:"탐험 시작!", fishBtn:"낚시", peekBtn:"살펴보기",
     homeBtn:"처음으로",
     voiceBtn:"🎤 음성으로 입력", voiceListening:"🎤 듣고 있어요…",
@@ -431,7 +426,6 @@ const I18N = {
     next:"Siguiente", back:"Atrás", skip:"Saltar", start:"Empezar",
     nameTitle:"Escribe tu nombre", delete:"Borrar",
     readyMsg:"¡Listo!", backToTop:"Volver al inicio",
-    mapPlaceholder:"(Este mapa es provisional. Se sustituirá por el mapa real en cuanto llegue el plano de la tienda)",
     goMap:"¡A explorar!", fishBtn:"Pescar", peekBtn:"Mirar",
     homeBtn:"Volver al inicio",
     voiceBtn:"🎤 Hablar", voiceListening:"🎤 Escuchando…",
@@ -448,7 +442,6 @@ const I18N = {
     next:"Avanti", back:"Indietro", skip:"Salta", start:"Inizia",
     nameTitle:"Scrivi il tuo nome", delete:"Cancella",
     readyMsg:"Pronto!", backToTop:"Torna all'inizio",
-    mapPlaceholder:"(Questa è una mappa provvisoria. Sarà sostituita da quella reale non appena arriva la piantina del locale)",
     goMap:"Si parte!", fishBtn:"Pesca", peekBtn:"Guarda",
     homeBtn:"Torna all'inizio",
     voiceBtn:"🎤 Parla", voiceListening:"🎤 Sto ascoltando…",
@@ -465,7 +458,6 @@ const I18N = {
     next:"Tiếp theo", back:"Quay lại", skip:"Bỏ qua", start:"Bắt đầu",
     nameTitle:"Nhập tên của bạn", delete:"Xóa",
     readyMsg:"Sẵn sàng rồi!", backToTop:"Về trang đầu",
-    mapPlaceholder:"(Đây là bản đồ tạm thời. Bản đồ chính thức sẽ thay thế khi có sơ đồ cửa hàng)",
     goMap:"Cùng khám phá!", fishBtn:"Câu cá", peekBtn:"Xem",
     homeBtn:"Về trang đầu",
     voiceBtn:"🎤 Nói để nhập", voiceListening:"🎤 Đang nghe…",
@@ -482,7 +474,6 @@ const I18N = {
     next:"Susunod", back:"Bumalik", skip:"Laktawan", start:"Simulan",
     nameTitle:"Ilagay ang iyong pangalan", delete:"Burahin",
     readyMsg:"Handa na!", backToTop:"Bumalik sa simula",
-    mapPlaceholder:"(Pansamantalang mapa ito. Papalitan ito ng tunay na mapa kapag dumating ang floor plan ng tindahan)",
     goMap:"Mag-explore tayo!", fishBtn:"Mangisda", peekBtn:"Tingnan",
     homeBtn:"Bumalik sa simula",
     voiceBtn:"🎤 Magsalita", voiceListening:"🎤 Nakikinig…",
@@ -1315,39 +1306,43 @@ function goToStart(){
   showScreen("screen-start");
 }
 
-/* ============ マップ(フェーズ2: プレースホルダー) ============
-   実店舗の間取り図が届くまでの仮マップ。
-   構造: 外周=歩ける通路(AISLE) → その内側=水路(WATER、釣り場) → 中央=船のデッキ(DECK)
-   水路は北と南の1マスだけ橋(BRIDGE)でつながり、通路とデッキを行き来できる。
-   タイル種別は distance-from-edge (d) で機械的に決めているので、
-   本番マップに差し替える際はこの生成ロジックを間取り図ベースの配列に置き換えるだけでよい。
+/* ============ マップ(フェーズ4: 目黒店の間取り図ベース) ============
+   店舗の間取り図(2026-07-28受領)を元にした本番マップ。
+   縦長の店内を上(奥・階段側の大水槽)→下(入口・レジ側の蛇行水路+舟形の生け簀)へたどる構成。
+   9列(内側)+左右の外壁1列ずつ=MAP_COLS列。行数が多く1画面に収まらないため
+   プレイヤー追従のカメラ(cameraY)で縦スクロール表示する。
+   記号: '#'=壁/厨房裏など立入禁止, '.'=通路, 'd'=テーブル席・座敷席(歩行可), '~'=水(いけす、つる用), 'k'=のぞく(宝探し)スポット
+   店舗改装等でレイアウトが変わった場合はこの MAP_ROWS_DATA を書き換えるだけでよい。
 */
-const MAP_COLS = 15, MAP_ROWS = 19, TILE = 26;
-const T = { WALL:0, AISLE:1, WATER:2, DECK:3, KAGO:4, BRIDGE:5 };
-function walkable(t){ return t===T.AISLE || t===T.DECK || t===T.BRIDGE; }
+const MAP_ROWS_DATA = [
+  "#########", "#########", // 上端の余白(プレイヤー画像が画面上端で欠けないためのバッファ)
+  ".....~~~~", ".....~~~~", ".....~~~~", ".....~~~~", ".....~~~~", ".....~~~~", // 上部の大水槽(階段・入口側)
+  ".........", // 通路
+  "d.......d", "d...#...d", "d.......d", "d...#...d", "d.......d", "d...#...d", "d.......d", "d.......d", // テーブル席
+  "...######", "...######", "...######", "...######", "...######", "...######", // 厨房バックヤード(立入禁止)
+  "d....#..d", "d.......d", "d....#..d", "d.......d", // 酒棚・バーエリア
+  "d...#...d", "d.......d", "d...#...d", "d.......d", "d...#...d", "d.......d", // テーブル席
+  "..~~~k...", "...~~~...", "....~~~..", "....k~~~.", "....~~~..", "...~~~...", "k.~~~....", ".~~~.....", "..~~~....", "...~~~k..", "..~~~~~..", "...~~~...", // 下部の蛇行水路+舟形の生け簀(船上座敷席)
+  ".........", ".........", "........." // 入口・レジ前
+];
+const MAP_COLS = MAP_ROWS_DATA[0].length + 2, MAP_ROWS = MAP_ROWS_DATA.length, TILE = 26;
+const VIEW_COLS = MAP_COLS, VIEW_ROWS = 15;
+const T = { WALL:0, AISLE:1, WATER:2, DECK:3, KAGO:4 };
+function walkable(t){ return t===T.AISLE || t===T.DECK; }
 
 let mapGrid = null;
+let cameraY = 0;
 const player = { r:0, c:0, px:0, py:0, path:[], moving:false };
 let playerSprite = null;
 
 function buildMapGrid(){
-  const grid = [];
-  for(let r=0;r<MAP_ROWS;r++){
-    const row = [];
-    for(let c=0;c<MAP_COLS;c++){
-      const d = Math.min(r, MAP_ROWS-1-r, c, MAP_COLS-1-c);
-      row.push(d===0 ? T.WALL : d===1 ? T.AISLE : d===2 ? T.WATER : T.DECK);
-    }
-    grid.push(row);
-  }
-  const midC = Math.floor(MAP_COLS/2);
-  grid[2][midC] = T.BRIDGE;
-  grid[MAP_ROWS-3][midC] = T.BRIDGE;
-  grid[1][3] = T.KAGO;
-  grid[1][MAP_COLS-4] = T.KAGO;
-  grid[MAP_ROWS-2][3] = T.KAGO;
-  grid[MAP_ROWS-2][MAP_COLS-4] = T.KAGO;
-  mapGrid = grid;
+  const CH = { "#":T.WALL, ".":T.AISLE, "d":T.DECK, "~":T.WATER, "k":T.KAGO };
+  mapGrid = MAP_ROWS_DATA.map(rowStr=>{
+    const row = [T.WALL];
+    for(const ch of rowStr) row.push(CH[ch]);
+    row.push(T.WALL);
+    return row;
+  });
 }
 
 function bfsPath(sr, sc, tr, tc){
@@ -1408,13 +1403,12 @@ const mapCtx = mapCanvas.getContext("2d");
 function drawTile(r,c){
   const t = mapGrid[r][c];
   const x = c*TILE, y = r*TILE;
-  let fill = "#7fbf6b";
-  if(t===T.WALL) fill = "#5e9a4a";
+  let fill = "#e4d3a8";
+  if(t===T.WALL) fill = "#7a6a55";
   else if(t===T.AISLE) fill = "#e4d3a8";
   else if(t===T.WATER) fill = "#2f8fc4";
   else if(t===T.DECK) fill = "#a9722f";
   else if(t===T.KAGO) fill = "#e4d3a8";
-  else if(t===T.BRIDGE) fill = "#8b5a2b";
   mapCtx.fillStyle = fill;
   mapCtx.fillRect(x,y,TILE,TILE);
 
@@ -1425,12 +1419,18 @@ function drawTile(r,c){
     mapCtx.moveTo(x+4, y+TILE/2);
     mapCtx.quadraticCurveTo(x+TILE/2, y+TILE/2-5, x+TILE-4, y+TILE/2);
     mapCtx.stroke();
-  } else if(t===T.DECK || t===T.BRIDGE){
+  } else if(t===T.DECK){
     mapCtx.strokeStyle = "rgba(0,0,0,.12)";
     mapCtx.lineWidth = 1;
     mapCtx.beginPath();
     mapCtx.moveTo(x, y+TILE*0.3); mapCtx.lineTo(x+TILE, y+TILE*0.3);
     mapCtx.moveTo(x, y+TILE*0.7); mapCtx.lineTo(x+TILE, y+TILE*0.7);
+    mapCtx.stroke();
+  } else if(t===T.WALL){
+    mapCtx.strokeStyle = "rgba(0,0,0,.15)";
+    mapCtx.lineWidth = 1;
+    mapCtx.beginPath();
+    mapCtx.moveTo(x, y+TILE); mapCtx.lineTo(x+TILE, y);
     mapCtx.stroke();
   } else if(t===T.KAGO){
     mapCtx.fillStyle = "#8b5a2b";
@@ -1444,10 +1444,17 @@ function drawTile(r,c){
 }
 
 function drawMap(){
-  mapCanvas.width = MAP_COLS*TILE;
-  mapCanvas.height = MAP_ROWS*TILE;
-  for(let r=0;r<MAP_ROWS;r++) for(let c=0;c<MAP_COLS;c++) drawTile(r,c);
+  mapCanvas.width = VIEW_COLS*TILE;
+  mapCanvas.height = VIEW_ROWS*TILE;
+  const viewH = VIEW_ROWS*TILE, mapH = MAP_ROWS*TILE;
+  cameraY = Math.max(0, Math.min(player.py - viewH/2, mapH - viewH));
+  mapCtx.save();
+  mapCtx.translate(0, -cameraY);
+  const rStart = Math.max(0, Math.floor(cameraY/TILE)-1);
+  const rEnd = Math.min(MAP_ROWS-1, Math.ceil((cameraY+viewH)/TILE)+1);
+  for(let r=rStart;r<=rEnd;r++) for(let c=0;c<MAP_COLS;c++) drawTile(r,c);
   drawPlayer();
+  mapCtx.restore();
 }
 
 function drawPlayer(){
@@ -1514,7 +1521,7 @@ mapCanvas.addEventListener("click", (e)=>{
   const scaleX = mapCanvas.width / rect.width;
   const scaleY = mapCanvas.height / rect.height;
   const x = (e.clientX - rect.left) * scaleX;
-  const y = (e.clientY - rect.top) * scaleY;
+  const y = (e.clientY - rect.top) * scaleY + cameraY;
   const c = Math.floor(x/TILE), r = Math.floor(y/TILE);
   if(r<0||c<0||r>=MAP_ROWS||c>=MAP_COLS) return;
   movePlayerTo(r,c);
@@ -1548,14 +1555,13 @@ document.getElementById("btnGoMap").addEventListener("click", ()=>{
   buildMapGrid();
   makePlayerSprite();
   const midC = Math.floor(MAP_COLS/2);
-  player.r = MAP_ROWS-2; player.c = midC;
+  player.r = MAP_ROWS-1; player.c = midC;
   [player.px, player.py] = tileCenter(player.r, player.c);
   player.path = []; player.moving = false;
   applyI18n();
   showScreen("screen-map");
   drawMap();
   updateActionButtons();
-  showToast(I18N[state.lang].mapPlaceholder);
 });
 
 document.getElementById("btnMapHome").addEventListener("click", ()=>{
