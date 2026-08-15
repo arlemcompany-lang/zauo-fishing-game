@@ -3,11 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>ざうお目黒店 なつやすみ釣りゲーム</title>
+<title>ざうお目黒店 なつやすみつりゲーム</title>
 <style>
   :root{
     --sea:#1e6fa8; --sea-deep:#0f4c75; --sand:#f4e2c8; --wood:#8b5a2b;
     --accent:#ff9f43; --white:#ffffff;
+    --langbar-h:44px;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
   html,body{height:100%; margin:0; overflow:hidden; overscroll-behavior:none;}
@@ -39,19 +40,9 @@
     font-size:22px; text-align:center; margin:12px 0 20px;
   }
 
-  /* ---- 言語選択 ---- */
-  .lang-grid{
-    display:grid; grid-template-columns:1fr 1fr; gap:14px;
-    width:100%; max-width:360px; margin-top:12px;
-  }
-  .lang-btn{
-    background:#fff; border:none; border-radius:18px; padding:22px 8px;
-    box-shadow:0 4px 0 rgba(0,0,0,.15); font-size:17px; font-weight:bold;
-    color:#333; display:flex; flex-direction:column; align-items:center; gap:8px;
-  }
-  .lang-btn .flag{font-size:38px;}
-  .flag-canvas{display:block; border-radius:4px; box-shadow:0 0 0 1px rgba(0,0,0,.18);}
-  .lang-btn:active{transform:translateY(3px); box-shadow:0 1px 0 rgba(0,0,0,.15);}
+  /* ---- 国旗 ---- */
+  /* 言語選択画面(.lang-grid / 大きい .lang-btn)は廃止し、上部の #langBar に置き換えた */
+  .flag-canvas{display:block; border-radius:4px;}
 
   /* ---- 共通ボタン ---- */
   .big-btn{
@@ -72,6 +63,25 @@
     border-radius:20px; padding:8px; margin-top:6px;
   }
   #charCanvas{display:block;}
+  /* 画面が短い端末(iPhone SE等)ではプレビューを小さくし、
+     選択肢がなるべく多く画面に見えるようにする */
+  @media (max-height:720px){
+    #charCanvas{width:148px; height:181px;}
+    .char-preview-wrap{padding:4px; margin-top:2px;}
+  }
+  /* 選択肢ブロックが多く画面に収まらないため、画面全体をスクロールさせると
+     「つぎへ」ボタンが画面外に隠れる。選択肢部分だけをスクロール領域にして
+     タイトル・キャラプレビュー・つぎへボタンは常に見えるようにする */
+  #screen-char{overflow:hidden;}
+  #screen-char > h1.title,
+  #screen-char > .char-preview-wrap,
+  #screen-char > .nav-row{flex:0 0 auto;}
+  #screen-char > #charOptions{
+    flex:1 1 auto; min-height:0; overflow-y:auto;
+    width:100%; display:flex; flex-direction:column; align-items:center;
+    padding-bottom:6px;
+  }
+  #screen-char > .nav-row{margin-top:8px; padding-top:0;}
   .option-block{width:100%; max-width:400px; margin-top:14px;}
   .option-label{color:#fff; font-size:13px; font-weight:bold; margin:0 0 6px 4px; text-shadow:0 1px 2px rgba(0,0,0,.3);}
   .option-row{display:flex; gap:10px; flex-wrap:wrap; justify-content:center;}
@@ -105,6 +115,22 @@
     0%,100%{transform:scale(1);}
     50%{transform:scale(1.06);}
   }
+  /* kbAreaはflexアイテムなので幅指定がないと中身のmin-content幅まで縮み、
+     五十音表が極端に細くなる(キー幅18px)。width:100%で画面幅いっぱいに広げる */
+  #kbArea{
+    width:100%; display:flex; flex-direction:column; align-items:center;
+  }
+  /* 五十音表は縦に長く、画面全体をスクロールさせると「はじめる」ボタンが
+     画面外に隠れて子供が見つけられない。キーボード部分だけをスクロール領域にして、
+     タイトル・名前表示・下部ボタンは常に画面内に見えるようにする */
+  #screen-name{overflow:hidden;}
+  #screen-name > h1.title,
+  #screen-name > #nameDisplay,
+  #screen-name > .voice-btn,
+  #screen-name > .kb-toolrow,
+  #screen-name > .nav-row{flex:0 0 auto;}
+  #screen-name > #kbArea{flex:1 1 auto; min-height:0; overflow-y:auto; padding:2px 0 6px;}
+  #screen-name > .nav-row{margin-top:8px; padding-top:0;}
   .kb-grid{
     display:grid; gap:6px; width:100%; max-width:420px;
   }
@@ -212,33 +238,57 @@
   @keyframes confettiFall{
     to{ transform:translateY(110vh) rotate(540deg); opacity:.2; }
   }
+
+  /* ---- 言語切り替えバー(全画面共通・上部固定) ---- */
+  #langBar{
+    position:absolute; top:0; left:0; right:0; z-index:30;
+    display:flex; justify-content:center; align-items:center; gap:2px;
+    height:var(--langbar-h); padding:0 4px;
+    background:rgba(255,255,255,.25);
+    border-bottom:1px solid rgba(255,255,255,.4);
+  }
+  #langBar .lang-btn{
+    display:flex; align-items:center; justify-content:center;
+    width:36px; height:36px; margin:0; padding:0;
+    border:0; background:transparent; box-shadow:none; border-radius:7px;
+  }
+  #langBar .flag-canvas{
+    width:28px; height:19px; opacity:.5;
+    box-shadow:0 0 0 1px rgba(0,0,0,.25);
+    transition:opacity .12s, transform .12s;
+  }
+  #langBar .lang-btn.is-active{background:rgba(255,255,255,.6);}
+  #langBar .lang-btn.is-active .flag-canvas{opacity:1; box-shadow:0 0 0 2px var(--accent);}
+  #langBar .lang-btn:active .flag-canvas{transform:scale(.9);}
+
+  /* 言語バーに隠れないよう各画面を下げる(既存の padding 指定より後に置いて上書きする) */
+  .screen{padding-top:calc(var(--langbar-h) + 4px);}
+  #screen-map{padding-top:calc(var(--langbar-h) + 4px);}
 </style>
 </head>
 <body>
 <div id="app">
 
-  <!-- 1. 言語選択 -->
-  <div class="screen active" id="screen-lang">
-    <h1 class="title" style="margin-top:40px;">ざうお<br>なつやすみ釣りゲーム</h1>
-    <div class="lang-grid">
-      <button class="lang-btn" data-lang="ja"><span class="flag"><canvas class="flag-canvas" data-flag="ja" width="42" height="28"></canvas></span>にほんご</button>
-      <button class="lang-btn" data-lang="en"><span class="flag"><canvas class="flag-canvas" data-flag="en" width="42" height="28"></canvas></span>English</button>
-      <button class="lang-btn" data-lang="zh"><span class="flag"><canvas class="flag-canvas" data-flag="zh" width="42" height="28"></canvas></span>中文</button>
-      <button class="lang-btn" data-lang="ko"><span class="flag"><canvas class="flag-canvas" data-flag="ko" width="42" height="28"></canvas></span>한국어</button>
-      <button class="lang-btn" data-lang="es"><span class="flag"><canvas class="flag-canvas" data-flag="es" width="42" height="28"></canvas></span>Español</button>
-      <button class="lang-btn" data-lang="it"><span class="flag"><canvas class="flag-canvas" data-flag="it" width="42" height="28"></canvas></span>Italiano</button>
-      <button class="lang-btn" data-lang="vi"><span class="flag"><canvas class="flag-canvas" data-flag="vi" width="42" height="28"></canvas></span>Tiếng Việt</button>
-      <button class="lang-btn" data-lang="tl"><span class="flag"><canvas class="flag-canvas" data-flag="tl" width="42" height="28"></canvas></span>Tagalog</button>
-    </div>
-  </div>
+  <!-- 言語切り替え(魚種判別アプリと同じく、上の国旗をタップして切り替える) -->
+  <nav id="langBar" aria-label="Language / 言語切替">
+    <button type="button" class="lang-btn is-active" data-lang="ja" aria-label="日本語"><canvas class="flag-canvas" data-flag="ja" width="42" height="28"></canvas></button>
+    <button type="button" class="lang-btn" data-lang="en" aria-label="English"><canvas class="flag-canvas" data-flag="en" width="42" height="28"></canvas></button>
+    <button type="button" class="lang-btn" data-lang="zh" aria-label="中文"><canvas class="flag-canvas" data-flag="zh" width="42" height="28"></canvas></button>
+    <button type="button" class="lang-btn" data-lang="ko" aria-label="한국어"><canvas class="flag-canvas" data-flag="ko" width="42" height="28"></canvas></button>
+    <button type="button" class="lang-btn" data-lang="es" aria-label="Español"><canvas class="flag-canvas" data-flag="es" width="42" height="28"></canvas></button>
+    <button type="button" class="lang-btn" data-lang="it" aria-label="Italiano"><canvas class="flag-canvas" data-flag="it" width="42" height="28"></canvas></button>
+    <button type="button" class="lang-btn" data-lang="vi" aria-label="Tiếng Việt"><canvas class="flag-canvas" data-flag="vi" width="42" height="28"></canvas></button>
+    <button type="button" class="lang-btn" data-lang="tl" aria-label="Tagalog"><canvas class="flag-canvas" data-flag="tl" width="42" height="28"></canvas></button>
+  </nav>
 
   <!-- 2. キャラメイク -->
-  <div class="screen" id="screen-char">
+  <div class="screen active" id="screen-char">
     <h1 class="title" data-i18n="charTitle" style="margin-top:6px;"></h1>
     <div class="char-preview-wrap">
       <canvas id="charCanvas" width="180" height="220"></canvas>
     </div>
 
+    <div id="charOptions">
     <div class="option-block">
       <div class="option-label" data-i18n="optGender"></div>
       <div class="option-row" id="row-gender"></div>
@@ -262,6 +312,7 @@
     <div class="option-block">
       <div class="option-label" data-i18n="optPants"></div>
       <div class="option-row" id="row-pants"></div>
+    </div>
     </div>
 
     <div class="nav-row">
@@ -492,15 +543,23 @@ const FISH_NAMES = {
   aji:{ja:"アジ",en:"Horse Mackerel",zh:"竹荚鱼",ko:"전갱이",es:"Chicharro",it:"Suro",vi:"Cá nục",tl:"Alumahan"},
   shimaaji:{ja:"シマアジ",en:"Striped Jack",zh:"条纹竹荚鱼",ko:"줄전갱이",es:"Palometa rayada",it:"Leccia striata",vi:"Cá cam sọc",tl:"Talakitok na Guhit"},
   sazae:{ja:"サザエ",en:"Turban Shell",zh:"海螺",ko:"소라",es:"Caracola",it:"Chiocciola di mare",vi:"Ốc đụn",tl:"Susong-dagat"},
-  ebi:{ja:"車海老",en:"Tiger Prawn",zh:"斑节虾",ko:"보리새우",es:"Langostino tigre",it:"Gambero tigre",vi:"Tôm sú",tl:"Hipong Tigre"},
+  awabi:{ja:"アワビ",en:"Abalone",zh:"鲍鱼",ko:"전복",es:"Abulón",it:"Abalone",vi:"Bào ngư",tl:"Abalone"},
+  ebi:{ja:"クルマエビ",en:"Tiger Prawn",zh:"斑节虾",ko:"보리새우",es:"Langostino tigre",it:"Gambero tigre",vi:"Tôm sú",tl:"Hipong Tigre"},
   ise:{ja:"イセエビ",en:"Spiny Lobster",zh:"龙虾",ko:"닭새우",es:"Langosta espinosa",it:"Aragosta",vi:"Tôm hùm gai",tl:"Banagan"},
   kasago:{ja:"カサゴ",en:"Scorpionfish",zh:"石狗公",ko:"쏨뱅이",es:"Rascacio",it:"Scorfano",vi:"Cá đá",tl:"Isdang Bato"}
 };
 
-const COLLECTION_ORDER = ["aji","kasago","tai","hirame","shimaaji","sazae","ebi","ise"];
+const COLLECTION_ORDER = ["aji","kasago","tai","hirame","shimaaji","sazae","awabi","ebi","ise"];
 /* レア度: アジ★1 / カサゴ★2 / タイ・ヒラメ★3 / シマアジ★4(最レア) */
 const FISH_TABLE = [["aji",45],["kasago",25],["tai",12],["hirame",12],["shimaaji",6]];
-const TREASURE_TABLE = [["sazae",60],["ebi",35],["ise",5]];
+/* カゴの種類ごとの抽選表。オーナー指示で「エビのカゴ」「貝のカゴ」に分け、狙って獲れるようにした。
+   種類を増やすときは FISH_NAMES(8言語) / SPECIES_INFO / COLLECTION_ORDER / drawSpeciesGraphic にも追加する */
+const TREASURE_TABLES = {
+  ebi: [["ebi",80],["ise",20]],      // エビカゴ: 車海老 / イセエビ(レア)
+  kai: [["sazae",85],["awabi",15]]   // 貝カゴ: サザエ / アワビ(レア)
+};
+/* 当たり枠。獲ったときに画面が金色に光る */
+const RARE_TREASURES = ["ise","awabi"];
 function weightedPick(table){
   const total = table.reduce((s,[,w])=>s+w,0);
   let r = Math.random()*total;
@@ -515,6 +574,7 @@ const SPECIES_INFO = {
   tai:{type:"fish", color:"#ffb3c1", accent:"#e8607d"},
   hirame:{type:"flatfish", color:"#c9a06a", accent:"#8a6a3d"},
   sazae:{type:"shell", color:"#d98a3d", accent:"#a85f22"},
+  awabi:{type:"abalone", color:"#7fa89b", accent:"#3f5f57"},
   ebi:{type:"shrimp", color:"#ff8f6b", accent:"#d85a36"},
   ise:{type:"shrimp", color:"#ff6b6b", accent:"#c23458", spiny:true}
 };
@@ -565,22 +625,110 @@ function drawSpeciesGraphic(ctx, w, h, key, silhouette){
       if(a===0.5) ctx.moveTo(x,y); else ctx.lineTo(x,y);
     }
     ctx.stroke();
-  } else if(info.type === "shrimp"){
+  } else if(info.type === "abalone"){
+    // アワビ: 平たい耳のような殻。ふちに沿って穴が一列に並ぶのがサザエとの見分け
+    const rx = w*0.34, ry = h*0.26;
     ctx.fillStyle = main;
     ctx.beginPath();
-    ctx.arc(0,0,w*0.26,Math.PI*0.15,Math.PI*1.5);
-    ctx.arc(w*0.1,-h*0.05,w*0.15,Math.PI*1.5,Math.PI*2.1);
+    ctx.ellipse(0, 0, rx, ry, -0.25, 0, Math.PI*2);
     ctx.fill();
-    if(info.spiny && !silhouette){
-      ctx.strokeStyle = accent; ctx.lineWidth = 1.5;
-      for(let i=0;i<5;i++){
-        const ang = -Math.PI*0.6 + i*0.25;
+    if(!silhouette){
+      // 内側の真珠光沢
+      ctx.fillStyle = "rgba(255,255,255,.35)";
+      ctx.beginPath();
+      ctx.ellipse(-rx*0.18, -ry*0.18, rx*0.55, ry*0.5, -0.25, 0, Math.PI*2);
+      ctx.fill();
+      // 成長線
+      ctx.strokeStyle = accent; ctx.lineWidth = 1.2;
+      for(let i=1;i<=3;i++){
         ctx.beginPath();
-        ctx.moveTo(Math.cos(ang)*w*0.2, Math.sin(ang)*w*0.2);
-        ctx.lineTo(Math.cos(ang)*w*0.36, Math.sin(ang)*w*0.36);
+        ctx.ellipse(0, 0, rx*(0.35+i*0.2), ry*(0.35+i*0.2), -0.25, Math.PI*0.15, Math.PI*1.0);
         ctx.stroke();
       }
     }
+    // ふちの穴
+    ctx.fillStyle = silhouette ? "#7a838a" : accent;
+    for(let i=0;i<4;i++){
+      const a = Math.PI*1.12 + i*0.17;
+      ctx.beginPath();
+      ctx.arc(Math.cos(a)*rx*0.72, Math.sin(a)*ry*0.72, Math.max(1.4, w*0.028), 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.strokeStyle = silhouette ? "#8c959c" : accent;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, rx, ry, -0.25, 0, Math.PI*2);
+    ctx.stroke();
+  } else if(info.type === "shrimp"){
+    // エビ: 円弧に沿って節(体の輪)を並べ、片端に尾びれ、反対の端に頭・目・ヒゲを付ける。
+    // 背は円弧の外側、腹(脚)は内側。イセエビ(spiny)は背にトゲとヒゲを太くして見分ける
+    const R = w*0.21, segs = 7;
+    const a0 = Math.PI*0.85, a1 = Math.PI*1.85;   // a0=頭 a1=尾
+    const pt = (a)=> [Math.cos(a)*R, Math.sin(a)*R];
+
+    // 脚(腹側=円弧の内側)
+    if(!silhouette){
+      ctx.strokeStyle = accent; ctx.lineWidth = 1.3; ctx.lineCap = "round";
+      for(let i=1;i<=4;i++){
+        const tt=i/5.5, a=a0+(a1-a0)*tt, [x,y]=pt(a);
+        ctx.beginPath();
+        ctx.moveTo(x,y);
+        ctx.lineTo(x-Math.cos(a)*w*0.11, y-Math.sin(a)*w*0.11);
+        ctx.stroke();
+      }
+      ctx.lineCap = "butt";
+    }
+    // 尾びれ
+    const [tx,ty] = pt(a1);
+    ctx.fillStyle = main;
+    for(let k=-1;k<=1;k++){
+      const ang = a1 + Math.PI*0.5 + k*0.45;
+      ctx.beginPath();
+      ctx.moveTo(tx,ty);
+      ctx.lineTo(tx+Math.cos(ang)*w*0.17, ty+Math.sin(ang)*w*0.17);
+      ctx.lineTo(tx+Math.cos(ang+0.32)*w*0.15, ty+Math.sin(ang+0.32)*w*0.15);
+      ctx.closePath(); ctx.fill();
+    }
+    // 胴体の節(頭側が太く尾に向かって細くなる)
+    for(let i=0;i<segs;i++){
+      const tt = i/(segs-1), a = a0+(a1-a0)*tt, [x,y] = pt(a);
+      const rr = w*0.115*(1-tt*0.55);
+      ctx.fillStyle = main;
+      ctx.beginPath(); ctx.arc(x,y,rr,0,Math.PI*2); ctx.fill();
+      if(!silhouette && i>0){
+        ctx.strokeStyle = accent; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(x,y,rr,0,Math.PI*2); ctx.stroke();
+      }
+    }
+    // 背中のトゲ(イセエビ)
+    if(info.spiny && !silhouette){
+      ctx.strokeStyle = accent; ctx.lineWidth = 1.8; ctx.lineCap = "round";
+      for(let i=0;i<4;i++){
+        const tt=(i+0.4)/5.5, a=a0+(a1-a0)*tt, [x,y]=pt(a);
+        ctx.beginPath();
+        ctx.moveTo(x,y);
+        ctx.lineTo(x+Math.cos(a)*w*0.115, y+Math.sin(a)*w*0.115);
+        ctx.stroke();
+      }
+      ctx.lineCap = "butt";
+    }
+    // 頭・目・ヒゲ
+    const [hx,hy] = pt(a0);
+    ctx.strokeStyle = silhouette ? "#8c959c" : accent;
+    ctx.lineWidth = info.spiny ? 2.4 : 1.4;
+    ctx.lineCap = "round";
+    for(let k=0;k<2;k++){
+      ctx.beginPath();
+      ctx.moveTo(hx,hy);
+      ctx.quadraticCurveTo(hx-w*0.17, hy+w*0.13+k*w*0.08,
+                           hx-w*0.33, hy+w*0.04+k*w*0.15);
+      ctx.stroke();
+    }
+    ctx.lineCap = "butt";
+    ctx.fillStyle = silhouette ? "#7a838a" : "#2c2c2c";
+    ctx.beginPath();
+    ctx.arc(hx+w*0.035, hy-w*0.02, Math.max(1.6,w*0.03), 0, Math.PI*2);
+    ctx.fill();
   }
   ctx.restore();
 }
@@ -598,6 +746,7 @@ function defaultChar(){ return { gender:"boy", hair:defaultHairForGender("boy"),
 /* ============ 状態(すべてJS変数のみ。保存処理は一切書かない) ============ */
 const state = {
   lang:"ja",
+  kagoType:"ebi",   // 直前にのぞいたカゴの種類("ebi" / "kai")
   char: defaultChar(),
   name:"",
   collected:{},
@@ -1257,13 +1406,26 @@ function startVoiceInput(){
 }
 
 /* ============ イベント配線 ============ */
-document.querySelectorAll(".lang-btn").forEach(btn=>{
-  btn.addEventListener("click", ()=>{
-    state.lang = btn.getAttribute("data-lang");
-    applyI18n();
-    initCharScreen();
-    showScreen("screen-char");
+/* 国旗をタップするといまの画面のまま言語だけ切り替わる(画面遷移はしない) */
+function setLang(code){
+  if(state.lang === code) return;
+  state.lang = code;
+  document.querySelectorAll("#langBar .lang-btn").forEach(b=>{
+    b.classList.toggle("is-active", b.getAttribute("data-lang") === code);
   });
+  applyI18n();
+  updateVoiceButtonVisibility();
+  // 名前入力中は、日本語=五十音表 / それ以外=ABC表 に組み替える。入力済みの名前は消す
+  if(document.getElementById("screen-name").classList.contains("active")){
+    state.name = "";
+    renderName();
+    buildKeyboardForLang();
+  }
+  if(document.getElementById("screen-zukan").classList.contains("active")) buildZukanGrid();
+  if(document.getElementById("screen-map").classList.contains("active")) updateActionButtons();
+}
+document.querySelectorAll("#langBar .lang-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=> setLang(btn.getAttribute("data-lang")));
 });
 
 document.getElementById("btnCharNext").addEventListener("click", ()=>{
@@ -1293,7 +1455,8 @@ document.getElementById("btnRestart").addEventListener("click", ()=>{
   state.char = defaultChar();
   state.collected = {};
   state.completeShown = false;
-  showScreen("screen-lang");
+  initCharScreen();
+  showScreen("screen-char");
 });
 
 function goToStart(){
@@ -1306,29 +1469,76 @@ function goToStart(){
   showScreen("screen-start");
 }
 
-/* ============ マップ(フェーズ4: 目黒店の間取り図ベース) ============
-   店舗の間取り図(2026-07-28受領)を元にした本番マップ。
-   縦長の店内を上(奥・階段側の大水槽)→下(入口・レジ側の蛇行水路+舟形の生け簀)へたどる構成。
-   9列(内側)+左右の外壁1列ずつ=MAP_COLS列。行数が多く1画面に収まらないため
-   プレイヤー追従のカメラ(cameraY)で縦スクロール表示する。
-   記号: '#'=壁/厨房裏など立入禁止, '.'=通路, 'd'=テーブル席・座敷席(歩行可), '~'=水(いけす、つる用), 'k'=のぞく(宝探し)スポット
+/* ============ マップ(フェーズ5: 手描き店内図ベース) ============
+   オーナーから受領した手描きの店内図(2026-08-15)を元にした本番マップ。
+   ※2026-07-28受領の基本計画平面図では店内の構造を読み違えていたため、手描き図で全面的に作り直した。
+
+   店の形は「上が細く下が広い」逆L字。列の役割は上から下までほぼ共通:
+     ・左3列  : 左の通路(中〜下のみ。上は店の外)
+     ・次の2列: 海。中央を縦に貫く
+     ・次の4列: 上〜中は通路(北の突き当りから南へ一本道)、下はそのまま船(船上座敷席)になる
+     ・右3列  : 上の大水槽(海)。**この列は上部にしか存在せず、右にはみ出す形**(オーナー指示)
+   橋は中の海を東西に渡す。**左の通路と右側の通路をつなぐ唯一の道**なので、ここを壊すと左半分に行けなくなる。
+   船は席だが特別に歩行可(オーナー判断)。船首は下向きにすぼまる。
+
+   記号: '#'=壁・店外, '.'=通路, 'd'=船, 'b'=橋(どちらも歩行可), '~'=海(つる用),
+         'e'=エビカゴ, 's'=貝カゴ(どちらものぞく用。カゴの種類で獲れるものが変わる)
    店舗改装等でレイアウトが変わった場合はこの MAP_ROWS_DATA を書き換えるだけでよい。
+   ※変更したら必ず「左の通路から橋を渡って船まで行けるか」を確認すること(BFS到達性が壊れやすい)
 */
 const MAP_ROWS_DATA = [
-  "#########", "#########", // 上端の余白(プレイヤー画像が画面上端で欠けないためのバッファ)
-  ".....~~~~", ".....~~~~", ".....~~~~", ".....~~~~", ".....~~~~", ".....~~~~", // 上部の大水槽(階段・入口側)
-  ".........", // 通路
-  "d.......d", "d...#...d", "d.......d", "d...#...d", "d.......d", "d...#...d", "d.......d", "d.......d", // テーブル席
-  "...######", "...######", "...######", "...######", "...######", "...######", // 厨房バックヤード(立入禁止)
-  "d....#..d", "d.......d", "d....#..d", "d.......d", // 酒棚・バーエリア
-  "d...#...d", "d.......d", "d...#...d", "d.......d", "d...#...d", "d.......d", // テーブル席
-  "..~~~k...", "...~~~...", "....~~~..", "....k~~~.", "....~~~..", "...~~~...", "k.~~~....", ".~~~.....", "..~~~....", "...~~~k..", "..~~~~~..", "...~~~...", // 下部の蛇行水路+舟形の生け簀(船上座敷席)
-  ".........", ".........", "........." // 入口・レジ前
+  // 上端の余白(プレイヤー画像が画面上端で欠けないためのバッファ)
+  "############",
+  "############",
+  // ---- 上(北): 突き当りの通路 + その右にはみ出した大水槽 ----
+  // カゴの位置はオーナーの手描き図(2026-08-16)どおり。大水槽は左端の列に貝カゴ(上)とエビカゴ(下)
+  "#####....~~~",
+  "#####....~~~",
+  "#####....~~~",
+  "#####....s~~",   // 貝カゴ(大水槽・上)
+  "#####....~~~",
+  "#####....~~~",
+  "#####....~~~",
+  "#####....e~~",   // エビカゴ(大水槽・下)
+  "#####....~~~",
+  "#####....~~~",
+  "#####....###",   // 大水槽ここまで(右にはみ出しているのはここから上だけ)
+  // ---- 中: 左の通路 / 海 / 通路 ----
+  "...~~....###",
+  "...~~....###",
+  "...~~....###",
+  "...~s....###",   // 貝カゴ(橋の手前・通路側)
+  "...bb....###",   // 橋(左の通路 ⇔ 右の通路をつなぐ唯一の道)
+  "...bb....###",
+  "...bb....###",
+  "...~~....###",
+  // ---- 下(南): 左の通路 / 海 / 船(船上座敷席・歩行可) / 船の右側の海 ----
+  // 船の右にも1列ぶん海を通してある。壁に接していると船が浮いて見えないため
+  "...~edddd~##",   // エビカゴ(橋のすぐ下・船のとなり)
+  "...~~dddd~##",
+  "...~~dddd~##",
+  "...~~dddd~##",
+  "...~~dddd~##",
+  "...~~dddd~##",
+  "...~~dddd~##",
+  "...~~dddd~##",   // 歩ける船はここまで(四角)。船首のとがりは drawBoat() が曲線で描く
+  "...~~~~~~~##",   // 船首の曲線が乗る水面
+  "...~~~~~~~##",
+  "...~~~~~~~##"
 ];
-const MAP_COLS = MAP_ROWS_DATA[0].length + 2, MAP_ROWS = MAP_ROWS_DATA.length, TILE = 26;
-const VIEW_COLS = MAP_COLS, VIEW_ROWS = 15;
-const T = { WALL:0, AISLE:1, WATER:2, DECK:3, KAGO:4 };
-function walkable(t){ return t===T.AISLE || t===T.DECK; }
+const MAP_COLS = MAP_ROWS_DATA[0].length + 2, MAP_ROWS = MAP_ROWS_DATA.length, TILE = 24;
+const VIEW_COLS = MAP_COLS;
+/* 表示行数は端末の画面高さに合わせて決める(固定15行だと大きい端末で下半分が余り、
+   小さい端末では下のボタンを押し出してしまうため)。
+   reserve = 画面の上下余白 + マップ下の「ずかん/さいしょから」ボタンの高さ */
+let VIEW_ROWS = 15;
+function fitViewRows(){
+  const reserve = 92 + 44;   // 92=画面余白+下のボタン, 44=上の言語バー
+  const avail = Math.max(240, window.innerHeight - reserve);
+  VIEW_ROWS = Math.max(12, Math.min(MAP_ROWS, Math.floor(avail / TILE)));
+}
+const T = { WALL:0, AISLE:1, WATER:2, DECK:3, KAGO_EBI:4, BRIDGE:5, KAGO_KAI:6 };
+function walkable(t){ return t===T.AISLE || t===T.DECK || t===T.BRIDGE; }
 
 let mapGrid = null;
 let cameraY = 0;
@@ -1336,13 +1546,26 @@ const player = { r:0, c:0, px:0, py:0, path:[], moving:false };
 let playerSprite = null;
 
 function buildMapGrid(){
-  const CH = { "#":T.WALL, ".":T.AISLE, "d":T.DECK, "~":T.WATER, "k":T.KAGO };
+  const CH = { "#":T.WALL, ".":T.AISLE, "d":T.DECK, "~":T.WATER, "b":T.BRIDGE,
+               "e":T.KAGO_EBI, "s":T.KAGO_KAI };
   mapGrid = MAP_ROWS_DATA.map(rowStr=>{
     const row = [T.WALL];
     for(const ch of rowStr) row.push(CH[ch]);
     row.push(T.WALL);
     return row;
   });
+}
+
+/* スタート地点 = 左下の通路の一番下(＝入口・レジ。オーナー確認済み 2026-08-16)。
+   マップ最下段から上へ、各行は左から右へ探して最初に見つかった歩けるマスを使う。
+   座標をハードコードしないので、マップを書き換えても入口が左下である限り自動で追従する */
+function findStartTile(){
+  for(let r=MAP_ROWS-1; r>=0; r--){
+    for(let c=0; c<MAP_COLS; c++){
+      if(walkable(mapGrid[r][c])) return [r, c];
+    }
+  }
+  return [MAP_ROWS-1, Math.floor(MAP_COLS/2)];
 }
 
 function bfsPath(sr, sc, tr, tc){
@@ -1407,8 +1630,9 @@ function drawTile(r,c){
   if(t===T.WALL) fill = "#7a6a55";
   else if(t===T.AISLE) fill = "#e4d3a8";
   else if(t===T.WATER) fill = "#2f8fc4";
-  else if(t===T.DECK) fill = "#a9722f";
-  else if(t===T.KAGO) fill = "#e4d3a8";
+  else if(t===T.DECK) fill = "#2f8fc4";   // 船は水に浮いているので下地は水。船体は drawBoat() が描く
+  else if(t===T.BRIDGE) fill = "#b07c3f";
+  else if(t===T.KAGO_EBI || t===T.KAGO_KAI) fill = "#e4d3a8";
   mapCtx.fillStyle = fill;
   mapCtx.fillRect(x,y,TILE,TILE);
 
@@ -1420,11 +1644,26 @@ function drawTile(r,c){
     mapCtx.quadraticCurveTo(x+TILE/2, y+TILE/2-5, x+TILE-4, y+TILE/2);
     mapCtx.stroke();
   } else if(t===T.DECK){
-    mapCtx.strokeStyle = "rgba(0,0,0,.12)";
+    // 下地の水面(船体は drawBoat() が上から描く)
+    mapCtx.strokeStyle = "rgba(255,255,255,.35)";
+    mapCtx.lineWidth = 1.5;
+    mapCtx.beginPath();
+    mapCtx.moveTo(x+4, y+TILE/2);
+    mapCtx.quadraticCurveTo(x+TILE/2, y+TILE/2-5, x+TILE-4, y+TILE/2);
+    mapCtx.stroke();
+  } else if(t===T.BRIDGE){
+    // 橋: 渡る向き(東西)と直交する板目 + 南北の縁に手すり
+    mapCtx.strokeStyle = "rgba(0,0,0,.16)";
     mapCtx.lineWidth = 1;
     mapCtx.beginPath();
-    mapCtx.moveTo(x, y+TILE*0.3); mapCtx.lineTo(x+TILE, y+TILE*0.3);
-    mapCtx.moveTo(x, y+TILE*0.7); mapCtx.lineTo(x+TILE, y+TILE*0.7);
+    mapCtx.moveTo(x+TILE*0.33, y); mapCtx.lineTo(x+TILE*0.33, y+TILE);
+    mapCtx.moveTo(x+TILE*0.66, y); mapCtx.lineTo(x+TILE*0.66, y+TILE);
+    mapCtx.stroke();
+    mapCtx.strokeStyle = "#7a5124";
+    mapCtx.lineWidth = 3;
+    mapCtx.beginPath();
+    if(r>0 && mapGrid[r-1][c]!==T.BRIDGE){ mapCtx.moveTo(x, y+1.5); mapCtx.lineTo(x+TILE, y+1.5); }
+    if(r<MAP_ROWS-1 && mapGrid[r+1][c]!==T.BRIDGE){ mapCtx.moveTo(x, y+TILE-1.5); mapCtx.lineTo(x+TILE, y+TILE-1.5); }
     mapCtx.stroke();
   } else if(t===T.WALL){
     mapCtx.strokeStyle = "rgba(0,0,0,.15)";
@@ -1432,15 +1671,159 @@ function drawTile(r,c){
     mapCtx.beginPath();
     mapCtx.moveTo(x, y+TILE); mapCtx.lineTo(x+TILE, y);
     mapCtx.stroke();
-  } else if(t===T.KAGO){
-    mapCtx.fillStyle = "#8b5a2b";
+  } else if(t===T.KAGO_EBI || t===T.KAGO_KAI){
+    // 生け簀のカゴ。何が入っているか一目で分かるよう、種類ごとに色と中の絵を変える
+    const isEbi = (t === T.KAGO_EBI);
+    const cx0 = x+TILE/2, cy0 = y+TILE/2;
+    mapCtx.fillStyle = isEbi ? "#9c5f2e" : "#7d6a52";
     mapCtx.beginPath();
-    mapCtx.ellipse(x+TILE/2, y+TILE/2, TILE*0.34, TILE*0.28, 0, 0, Math.PI*2);
+    mapCtx.ellipse(cx0, cy0, TILE*0.38, TILE*0.32, 0, 0, Math.PI*2);
     mapCtx.fill();
-    mapCtx.strokeStyle = "#5c3a1a"; mapCtx.lineWidth = 2;
-    mapCtx.beginPath(); mapCtx.moveTo(x+TILE*0.2,y+TILE*0.42); mapCtx.lineTo(x+TILE*0.8,y+TILE*0.42); mapCtx.stroke();
-    mapCtx.beginPath(); mapCtx.moveTo(x+TILE*0.2,y+TILE*0.58); mapCtx.lineTo(x+TILE*0.8,y+TILE*0.58); mapCtx.stroke();
+    mapCtx.strokeStyle = "#4f3316"; mapCtx.lineWidth = 1.5;
+    mapCtx.stroke();
+    // カゴの網目
+    mapCtx.strokeStyle = "rgba(255,255,255,.30)"; mapCtx.lineWidth = 1;
+    mapCtx.beginPath();
+    mapCtx.moveTo(x+TILE*0.16, cy0-TILE*0.10); mapCtx.lineTo(x+TILE*0.84, cy0-TILE*0.10);
+    mapCtx.moveTo(x+TILE*0.16, cy0+TILE*0.10); mapCtx.lineTo(x+TILE*0.84, cy0+TILE*0.10);
+    mapCtx.stroke();
+    // 中身の目印: エビカゴ=赤いエビ / 貝カゴ=渦巻きの貝
+    if(isEbi){
+      mapCtx.strokeStyle = "#e8543f"; mapCtx.lineWidth = 2.4; mapCtx.lineCap = "round";
+      mapCtx.beginPath();
+      mapCtx.arc(cx0, cy0+TILE*0.06, TILE*0.17, Math.PI*1.15, Math.PI*2.05);
+      mapCtx.stroke();
+      mapCtx.lineCap = "butt";
+    } else {
+      mapCtx.strokeStyle = "#f2e2c4"; mapCtx.lineWidth = 2;
+      mapCtx.beginPath();
+      for(let a=0; a<=Math.PI*3.2; a+=0.25){
+        const rr = TILE*0.045 + a*TILE*0.032;
+        const px = cx0 + Math.cos(a)*rr, py = cy0 + Math.sin(a)*rr;
+        if(a===0) mapCtx.moveTo(px,py); else mapCtx.lineTo(px,py);
+      }
+      mapCtx.stroke();
+    }
   }
+}
+
+/* ============ 船の描画 ============
+   船をマスの集まり(四角い板)ではなく1隻の船として描く。
+   DECKタイルの各行の左右端から輪郭の点列を作り、角を曲線でつないで滑らかな船体にする。
+   船尾(上端)は通路と地続きなので直線のまま。船首(下端)だけ先端を伸ばしてとがらせる。
+   マップの船の形を変えても、この関数はDECKタイルから輪郭を作り直すので追従する。 */
+function boatRowSpans(){
+  const rows = [];
+  for(let r=0; r<MAP_ROWS; r++){
+    let min=-1, max=-1;
+    for(let c=0; c<MAP_COLS; c++) if(mapGrid[r][c]===T.DECK){ if(min<0) min=c; max=c; }
+    if(min>=0) rows.push({r, min, max});
+  }
+  return rows;
+}
+
+/* 船の寸法をDECKタイルから求める。マップの船の位置や大きさを変えても追従する */
+function boatGeometry(){
+  const rows = boatRowSpans();
+  if(rows.length === 0) return null;
+  let minC = Infinity, maxC = -Infinity;
+  for(const {min,max} of rows){ minC = Math.min(minC,min); maxC = Math.max(maxC,max); }
+  const left = minC*TILE, right = (maxC+1)*TILE;
+  const bowY = (rows[rows.length-1].r + 1) * TILE;
+  return {
+    minC, maxC, left, right, w: right-left, cx: (left+right)/2,
+    sternR: rows[0].r,
+    sternY: rows[0].r * TILE,
+    bowY,                         // 歩ける船の下端。ここから下は描画だけの船首
+    tipY: bowY + TILE*2.2         // 船首の先端
+  };
+}
+
+/* 船体の輪郭。船尾(上)は通路と地続きなので直線、
+   船首(下)は左右の舷から中心線上の1点へ向かうベジェ曲線でとがらせる。
+   **左右を必ず中心線 cx で対称に描く**(マスの段差から輪郭を作ると先端が左右非対称になるため) */
+function boatPath(g){
+  const inset = TILE*0.5;   // ここから曲線に入る
+  mapCtx.beginPath();
+  mapCtx.moveTo(g.left, g.sternY);
+  mapCtx.lineTo(g.left, g.bowY - inset);
+  mapCtx.bezierCurveTo(g.left,               g.bowY + TILE*0.55,
+                       g.cx - g.w*0.20,      g.tipY - TILE*0.40,
+                       g.cx,                 g.tipY);
+  mapCtx.bezierCurveTo(g.cx + g.w*0.20,      g.tipY - TILE*0.40,
+                       g.right,              g.bowY + TILE*0.55,
+                       g.right,              g.bowY - inset);
+  mapCtx.lineTo(g.right, g.sternY);
+  mapCtx.closePath();
+}
+
+function drawBoat(){
+  const g = boatGeometry();
+  if(!g) return;
+  const rim = Math.max(4, TILE*0.30);   // ふなべりの幅
+
+  mapCtx.save();
+  // 船のまわりの喫水線(水のふくらみ)
+  boatPath(g);
+  mapCtx.strokeStyle = "rgba(255,255,255,.45)";
+  mapCtx.lineWidth = 7;
+  mapCtx.lineJoin = "round";
+  mapCtx.stroke();
+
+  // 船底(甲板)
+  boatPath(g);
+  const grad = mapCtx.createLinearGradient(g.left, 0, g.right, 0);
+  grad.addColorStop(0,   "#b3844f");
+  grad.addColorStop(0.5, "#d9ac74");
+  grad.addColorStop(1,   "#b3844f");
+  mapCtx.fillStyle = grad;
+  mapCtx.fill();
+
+  // ここから内側の描き込み。船体からはみ出さないよう切り抜く
+  boatPath(g);
+  mapCtx.clip();
+
+  // 船の長さ方向に走る甲板の板目
+  mapCtx.strokeStyle = "rgba(110,70,30,.28)";
+  mapCtx.lineWidth = 1;
+  mapCtx.beginPath();
+  for(let c=g.minC+1; c<=g.maxC; c++){
+    mapCtx.moveTo(c*TILE, g.sternY);
+    mapCtx.lineTo(c*TILE, g.tipY);
+  }
+  mapCtx.stroke();
+
+  // 腰掛け板(横に渡した板)。船の長さから枚数を決める
+  const seatH = TILE*0.6, span = (g.bowY - g.sternY)/TILE;
+  const seatCount = Math.min(5, Math.max(2, Math.round(span/3.5)));
+  for(let i=1; i<=seatCount; i++){
+    const sy = g.sternY + (g.bowY - g.sternY)*i/(seatCount+1) - seatH/2;
+    mapCtx.fillStyle = "#e8c9a0";
+    mapCtx.fillRect(g.left-rim, sy, g.w+rim*2, seatH);
+    mapCtx.strokeStyle = "rgba(110,70,30,.45)";
+    mapCtx.lineWidth = 1.5;
+    mapCtx.strokeRect(g.left-rim, sy, g.w+rim*2, seatH);
+  }
+
+  // ふなべり(縁): 輪郭を内側にだけ太く塗って、ぐるりと一周する縁にする。
+  // 先に濃い色を少し太く塗ることで、縁の内側に境界線が残る
+  boatPath(g);
+  mapCtx.strokeStyle = "#a8763f";
+  mapCtx.lineWidth = rim*2 + 3;
+  mapCtx.lineJoin = "round";
+  mapCtx.stroke();
+  boatPath(g);
+  mapCtx.strokeStyle = "#e8c9a0";
+  mapCtx.lineWidth = rim*2;
+  mapCtx.stroke();
+  mapCtx.restore();
+
+  // 外周の輪郭線
+  boatPath(g);
+  mapCtx.strokeStyle = "#8b5a2b";
+  mapCtx.lineWidth = 2;
+  mapCtx.lineJoin = "round";
+  mapCtx.stroke();
 }
 
 function drawMap(){
@@ -1453,9 +1836,17 @@ function drawMap(){
   const rStart = Math.max(0, Math.floor(cameraY/TILE)-1);
   const rEnd = Math.min(MAP_ROWS-1, Math.ceil((cameraY+viewH)/TILE)+1);
   for(let r=rStart;r<=rEnd;r++) for(let c=0;c<MAP_COLS;c++) drawTile(r,c);
+  drawBoat();
   drawPlayer();
   mapCtx.restore();
 }
+
+/* 画面回転やアドレスバーの出入りで表示高さが変わったら行数を計算し直す */
+window.addEventListener("resize", ()=>{
+  if(!document.getElementById("screen-map").classList.contains("active")) return;
+  fitViewRows();
+  drawMap();
+});
 
 function drawPlayer(){
   if(!playerSprite) return;
@@ -1471,8 +1862,11 @@ function updateActionButtons(){
   for(const [dr,dc] of [[1,0],[-1,0],[0,1],[0,-1]]){
     const nr=r+dr, nc=c+dc;
     if(nr<0||nc<0||nr>=MAP_ROWS||nc>=MAP_COLS) continue;
-    if(mapGrid[nr][nc]===T.WATER) nearWater=true;
-    if(mapGrid[nr][nc]===T.KAGO) nearKago=true;
+    const t = mapGrid[nr][nc];
+    if(t===T.WATER) nearWater=true;
+    // 隣のカゴの種類を覚えておく(のぞいたときの抽選表がカゴごとに違うため)
+    if(t===T.KAGO_EBI){ nearKago=true; state.kagoType = "ebi"; }
+    if(t===T.KAGO_KAI){ nearKago=true; state.kagoType = "kai"; }
   }
   document.getElementById("btnFish").classList.toggle("show", nearWater);
   document.getElementById("btnPeek").classList.toggle("show", nearKago);
@@ -1554,8 +1948,9 @@ document.getElementById("btnZukanBack").addEventListener("click", ()=>{
 document.getElementById("btnGoMap").addEventListener("click", ()=>{
   buildMapGrid();
   makePlayerSprite();
-  const midC = Math.floor(MAP_COLS/2);
-  player.r = MAP_ROWS-1; player.c = midC;
+  fitViewRows();
+  const [sr, sc] = findStartTile();
+  player.r = sr; player.c = sc;
   [player.px, player.py] = tileCenter(player.r, player.c);
   player.path = []; player.moving = false;
   applyI18n();
@@ -1570,7 +1965,8 @@ document.getElementById("btnMapHome").addEventListener("click", ()=>{
   state.char = defaultChar();
   state.collected = {};
   state.completeShown = false;
-  showScreen("screen-lang");
+  initCharScreen();
+  showScreen("screen-char");
 });
 
 /* ============ 図鑑 ============ */
@@ -1994,15 +2390,109 @@ function startPeek(){
   }
 }
 
+/* カゴの中身を見せる演出。魚の playCatchReveal() と同じ役割。
+   従来は「◯◯ ゲット！」の文字だけで、貝やエビの姿が一度も見えないままだった。
+   水底から獲物がゆっくり浮かび上がり、あぶくときらきらを伴って中央で見得を切る。 */
+const TREASURE_RARITY = { sazae:1, ebi:2, awabi:3, ise:4 };
+
+function playPeekReveal(key, onDone){
+  const w = peekCanvas.width, h = peekCanvas.height;
+  const rarity = TREASURE_RARITY[key] || 1;
+  const duration = 1150, risePhase = 0.55;
+  const startY = h*0.92, endY = h*0.46, centerX = w/2;
+  const start = performance.now();
+
+  // 背景の砂はフレームごとに動かないよう先に位置を決めておく
+  const sand = [];
+  for(let i=0;i<10;i++) sand.push({x:Math.random()*w, y:h*0.5+Math.random()*h*0.5, a:Math.random()*Math.PI});
+  const bubbles = [];
+  for(let i=0;i<8+rarity*3;i++){
+    bubbles.push({x:centerX+(Math.random()-0.5)*95, r:2+Math.random()*4,
+                  speed:0.5+Math.random()*0.7, delay:Math.random()*0.4});
+  }
+  const sparkles = [];
+  const numSp = rarity + 2;
+  for(let i=0;i<numSp;i++){
+    sparkles.push({angle:(i/numSp)*Math.PI*2 + Math.random()*0.5,
+                   r:40+Math.random()*20, delay:Math.random()*0.25});
+  }
+  if(RARE_TREASURES.includes(key)) goldFlash();   // アワビ・イセエビは当たり枠
+
+  function frame(now){
+    const t = Math.min(1, (now-start)/duration);
+
+    const grad = peekCtx.createRadialGradient(w/2,h/2,20,w/2,h/2,w/2);
+    grad.addColorStop(0,"#2f8fc4"); grad.addColorStop(1,"#0f4c75");
+    peekCtx.fillStyle = grad; peekCtx.fillRect(0,0,w,h);
+    peekCtx.fillStyle = "rgba(228,211,168,.5)";
+    sand.forEach(sd=>{
+      peekCtx.beginPath(); peekCtx.ellipse(sd.x,sd.y,10,5,sd.a,0,Math.PI*2); peekCtx.fill();
+    });
+
+    bubbles.forEach(b=>{
+      const dt = Math.max(0, t-b.delay);
+      if(dt<=0) return;
+      const by = startY - dt*h*b.speed*1.6;
+      if(by < -10) return;
+      peekCtx.strokeStyle = "rgba(255,255,255," + Math.max(0,.5-dt*0.4) + ")";
+      peekCtx.lineWidth = 1.5;
+      peekCtx.beginPath(); peekCtx.arc(b.x, by, b.r, 0, Math.PI*2); peekCtx.stroke();
+    });
+
+    let y, scale;
+    if(t < risePhase){
+      const t2 = t/risePhase;
+      const e = 1 - Math.pow(1-t2, 3);      // 最後にゆっくり止まる
+      y = startY + (endY-startY)*e;
+      scale = 0.5 + 0.85*e;
+    } else {
+      const t3 = (t-risePhase)/(1-risePhase);
+      y = endY - Math.sin(t3*Math.PI)*5;
+      scale = 1.35 + Math.sin(t3*Math.PI*2)*0.04;
+    }
+
+    if(t >= risePhase){
+      const t3 = (t-risePhase)/(1-risePhase);
+      sparkles.forEach(sp=>{
+        const dt = Math.max(0, t3-sp.delay);
+        if(dt<=0) return;
+        const a = Math.min(1, dt*3) * (1-dt);
+        const sx = centerX + Math.cos(sp.angle)*sp.r*(0.7+dt*0.5);
+        const sy = y + Math.sin(sp.angle)*sp.r*(0.7+dt*0.5);
+        peekCtx.strokeStyle = "rgba(255,255,255," + Math.max(0,a) + ")";
+        peekCtx.lineWidth = 2;
+        peekCtx.beginPath();
+        peekCtx.moveTo(sx-5,sy); peekCtx.lineTo(sx+5,sy);
+        peekCtx.moveTo(sx,sy-5); peekCtx.lineTo(sx,sy+5);
+        peekCtx.stroke();
+      });
+    }
+
+    const size = 100*scale;
+    peekCtx.save();
+    peekCtx.translate(centerX, y);
+    peekCtx.translate(-size/2, -size/2);
+    drawSpeciesGraphic(peekCtx, size, size, key, false);
+    peekCtx.restore();
+
+    if(t < 1) requestAnimationFrame(frame);
+    else if(onDone) onDone();
+  }
+  requestAnimationFrame(frame);
+}
+
 function handlePeekTap(){
   document.getElementById("peekWrap").querySelectorAll(".glow-spot").forEach(e=> e.remove());
   document.getElementById("btnPeekCancel").style.display = "none";
-  document.getElementById("peekResultActions").style.display = "flex";
-  const key = weightedPick(TREASURE_TABLE);
+  const key = weightedPick(TREASURE_TABLES[state.kagoType] || TREASURE_TABLES.ebi);
   state.collected[key] = true;
   const dict = I18N[state.lang];
-  document.getElementById("peekMsg").textContent = dict.gotItemTemplate.replace("{name}", FISH_NAMES[key][state.lang]);
-  if(key === "ise") goldFlash();
+  // 獲物の姿を見せてから結果の文字とボタンを出す(金色フラッシュは演出側で出す)
+  playPeekReveal(key, ()=>{
+    document.getElementById("peekMsg").textContent =
+      dict.gotItemTemplate.replace("{name}", FISH_NAMES[key][state.lang]);
+    document.getElementById("peekResultActions").style.display = "flex";
+  });
 }
 
 document.getElementById("btnPeekCancel").addEventListener("click", ()=> showScreen("screen-map"));
@@ -2012,6 +2502,7 @@ document.getElementById("btnPeekRetry").addEventListener("click", startPeek);
 drawFlagCanvases();
 updateVoiceButtonVisibility();
 applyI18n();
+initCharScreen();   // 言語選択画面をなくし、日本語のキャラメイクから始まるため
 </script>
 </body>
 </html>
