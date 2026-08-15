@@ -2050,9 +2050,13 @@ function goldFlash(){
 const fishCanvas = document.getElementById("fishCanvas");
 const fishCtx = fishCanvas.getContext("2d");
 const FISH_BITE_WINDOW = 900;
-const REEL_START_GAUGE = 25;
-const REEL_TIMEOUT = 60000;   /* 巻く回数を増やしたぶん延ばす。base<gain なので巻き続けている限り
-                                 ゲージは前に進む。時間切れは「手が止まった子」への区切りという位置づけ */
+const REEL_START_GAUGE = 10;
+/* 巻きはじめの猶予。開始が10%と低いので、指を円に置くまでの一瞬で
+   ゲージが0になって即失敗する事故を防ぐため、最初のこの時間だけ魚は引かない */
+const REEL_GRACE_MS = 1200;
+const REEL_TIMEOUT = 90000;   /* 巻く回数を増やしたぶん延ばす。base<gain なので巻き続けている限り
+                                 ゲージは前に進む。時間切れは「手が止まった子」への区切りという位置づけで、
+                                 ゆっくり巻いた実測(最長シマアジ約50秒)に対して十分な余裕を取ってある */
 /* base: 引きの平均の強さ(ゲージ減少/秒)。amp: 波の振れ幅(base±ampで強弱)。
    period: 一往復にかかる秒数(短いほど強弱の切り替えが速い)。
    レア度が上がるほどamp・periodを強くし、「強く引かれてゲージが減る」「一瞬ゆるんでゲージが戻る」の
@@ -2061,7 +2065,7 @@ const REEL_TIMEOUT = 60000;   /* 巻く回数を増やしたぶん延ばす。ba
    連打式だった頃は1タップぶんの値で、1秒に何回も入力できる前提の数字だった。
    リール式は入力の速さが指の回転(1秒に1〜2回転)に制限されるため、
    オーナー指示「巻く回数をグンと増やす」に合わせて base(引きの強さ)ごと組み直してある。
-   実測の目安(25%→100%まで): 1回転/秒でアジ約14回転〜シマアジ約26回転。
+   実測の目安(10%→100%まで): 1回転/秒でアジ約18回転〜シマアジ約36回転。
    base を gain より十分小さくしてあるのは、ゆっくり巻く小さい子でも必ず前に進むようにするため */
 const FISH_FIGHT = {
   aji:      { gain:7.5, base:2.0, amp:0,   period:1.0 },
@@ -2490,7 +2494,8 @@ function fishLoop(now){
     fishLastFrameTime = now;
     const fight = FISH_FIGHT[fishPendingKey];
     const elapsedSec = (now - fishReelStart) / 1000;
-    const rate = currentDecayRate(fight, elapsedSec);
+    // 巻きはじめの猶予中は魚が引かない(指を円に置く時間を作る)
+    const rate = (now - fishReelStart < REEL_GRACE_MS) ? 0 : currentDecayRate(fight, elapsedSec);
     const intensity = fight.amp > 0 ? Math.max(0, Math.min(1, (rate - (fight.base-fight.amp)) / (fight.amp*2))) : 0;
     fishGauge = Math.max(0, Math.min(100, fishGauge - rate*dt));
     drawFightScene(intensity);
