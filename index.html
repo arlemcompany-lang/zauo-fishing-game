@@ -271,13 +271,12 @@
     align-items:center; justify-content:center;
   }
   #reelArea.show{display:flex;}
-  /* 指でぐるぐるなぞる輪なので、画面幅いっぱいまで大きくする */
-  #reelDial{
-    display:block; touch-action:none;
-    width:min(330px, 86vw); height:min(330px, 86vw);
-  }
-  /* 巻いている間は魚の絵を隠して円と入れ替える(魚の姿とゲージは円の中に描く) */
-  .mini-canvas-wrap.hide{display:none;}
+  /* 指でぐるぐるなぞる輪。実際の大きさは layoutReel() が
+     「海の絵と下のボタンを残した残りの高さ」から計算して指定する */
+  #reelDial{display:block; touch-action:none;}
+  /* 巻いている間も海は消さず、絵を小さくして円と並べる */
+  #screen-fish.reeling #fishCanvas{width:170px; height:170px;}
+  #screen-fish.reeling .mini-msg{margin:2px 0;}
   @media (max-height:700px){
     #fishCanvas{width:216px; height:216px;}
   }
@@ -1865,7 +1864,7 @@ function drawMap(){
 
 /* 画面回転やアドレスバーの出入りで表示高さが変わったら行数を計算し直す */
 window.addEventListener("resize", ()=>{
-  if(fishState === "reeling") sizeReelDial();
+  if(fishState === "reeling") layoutReel();
   if(!document.getElementById("screen-map").classList.contains("active")) return;
   fitViewRows();
   drawMap();
@@ -2052,7 +2051,8 @@ const fishCanvas = document.getElementById("fishCanvas");
 const fishCtx = fishCanvas.getContext("2d");
 const FISH_BITE_WINDOW = 900;
 const REEL_START_GAUGE = 25;
-const REEL_TIMEOUT = 30000;   // 巻く回数を増やしたぶん、時間切れも延ばす
+const REEL_TIMEOUT = 60000;   /* 巻く回数を増やしたぶん延ばす。base<gain なので巻き続けている限り
+                                 ゲージは前に進む。時間切れは「手が止まった子」への区切りという位置づけ */
 /* base: 引きの平均の強さ(ゲージ減少/秒)。amp: 波の振れ幅(base±ampで強弱)。
    period: 一往復にかかる秒数(短いほど強弱の切り替えが速い)。
    レア度が上がるほどamp・periodを強くし、「強く引かれてゲージが減る」「一瞬ゆるんでゲージが戻る」の
@@ -2061,14 +2061,14 @@ const REEL_TIMEOUT = 30000;   // 巻く回数を増やしたぶん、時間切�
    連打式だった頃は1タップぶんの値で、1秒に何回も入力できる前提の数字だった。
    リール式は入力の速さが指の回転(1秒に1〜2回転)に制限されるため、
    オーナー指示「巻く回数をグンと増やす」に合わせて base(引きの強さ)ごと組み直してある。
-   実測の目安(25%→100%まで): 1回転/秒でアジ約8回転〜シマアジ約14回転、2回転/秒なら約7〜10回転。
+   実測の目安(25%→100%まで): 1回転/秒でアジ約14回転〜シマアジ約26回転。
    base を gain より十分小さくしてあるのは、ゆっくり巻く小さい子でも必ず前に進むようにするため */
 const FISH_FIGHT = {
-  aji:      { gain:12, base:3.0, amp:0,   period:1.0 },
-  kasago:   { gain:11, base:3.2, amp:2.5, period:1.6 },
-  tai:      { gain:10, base:3.4, amp:4,   period:1.3 },
-  hirame:   { gain:10, base:3.4, amp:4,   period:1.1 },
-  shimaaji: { gain:9,  base:3.6, amp:5,   period:0.9 }
+  aji:      { gain:7.5, base:2.0, amp:0,   period:1.0 },
+  kasago:   { gain:6.8, base:2.2, amp:2,   period:1.6 },
+  tai:      { gain:6.2, base:2.4, amp:3.5, period:1.3 },
+  hirame:   { gain:6.2, base:2.4, amp:3.5, period:1.1 },
+  shimaaji: { gain:5.5, base:2.6, amp:4.5, period:0.9 }
 };
 /* レア度が高いほど跳ねる演出を派手にする(ジャンプの高さ・キラキラの数) */
 const FISH_RARITY = { aji:1, kasago:2, tai:3, hirame:3, shimaaji:4 };
@@ -2140,6 +2140,21 @@ function drawHitScene(t){
   fishCtx.strokeText(I18N[state.lang].hitMsg, 0, 0);
   fishCtx.fillStyle = "#fff176";
   fishCtx.fillText(I18N[state.lang].hitMsg, 0, 0);
+  fishCtx.restore();
+}
+
+/* 引き寄せ中の海。オーナー指示で「ヒット後も海の背景を消さない」ため、
+   円と並べて描き続ける。魚が強く引いている(intensity)ほどシルエットが揺れ、糸が張る */
+function drawFightScene(intensity){
+  const w = fishCanvas.width, h = fishCanvas.height;
+  drawFishScene(h*0.62, false);
+  if(!fishPendingKey) return;
+  const jx = (Math.random()-0.5)*intensity*16;
+  const jy = (Math.random()-0.5)*intensity*16;
+  const size = w*0.34;
+  fishCtx.save();
+  fishCtx.translate(w/2 - size/2 + jx, h*0.36 - size/2 + jy);
+  drawSpeciesGraphic(fishCtx, size, size, fishPendingKey, true);
   fishCtx.restore();
 }
 
@@ -2278,12 +2293,24 @@ function playCatchReveal(key, onDone){
 const reelDial = document.getElementById("reelDial");
 const reelCtx = reelDial.getContext("2d");
 
-/* 表示サイズに合わせて実際の描画解像度を決める(大きくしたときにボケないように) */
-function sizeReelDial(){
-  const r = reelDial.getBoundingClientRect();
-  if(r.width < 1) return;
+/* 円の大きさを決める。
+   海の絵と下の「もどる」を残したうえで、余っている高さと画面幅の小さいほうまで大きくする。
+   端末ごとに使える高さが違うのでCSSの固定値ではなく、毎回その場で測って決める。
+   ※先に0pxにしてから測るのは、前回の大きさに引きずられて縮まなくなるのを防ぐため */
+function layoutReel(){
+  const back = document.getElementById("btnFishCancel");
+  const area = document.getElementById("reelArea");
+  reelDial.style.width = "0px"; reelDial.style.height = "0px";
+  const areaTop = area.getBoundingClientRect().top;
+  const limitY  = back.getBoundingClientRect().top;
+  const byHeight = limitY - areaTop - 12;
+  const byWidth  = document.getElementById("screen-fish").clientWidth - 24;
+  const size = Math.max(150, Math.min(330, Math.min(byHeight, byWidth)));
+  reelDial.style.width = size + "px";
+  reelDial.style.height = size + "px";
+  // 大きくしたときにボケないよう、描画解像度は表示サイズ×画面の倍率にそろえる
   const dpr = Math.min(3, window.devicePixelRatio || 1);
-  const px = Math.round(r.width * dpr);
+  const px = Math.round(size * dpr);
   if(reelDial.width !== px){ reelDial.width = px; reelDial.height = px; }
 }
 
@@ -2337,16 +2364,11 @@ function drawReelDial(intensity, gauge){
   }
   reelCtx.restore();
 
-  // 中央: 掛かっている魚のシルエット(引きが強いほど揺れる)
-  if(fishPendingKey){
-    const jx = (Math.random()-0.5)*intensity*w*0.045;
-    const jy = (Math.random()-0.5)*intensity*w*0.045;
-    const size = w*0.36;
-    reelCtx.save();
-    reelCtx.translate(-size/2 + jx, -size/2 + jy);
-    drawSpeciesGraphic(reelCtx, size, size, fishPendingKey, true);
-    reelCtx.restore();
-  }
+  // 中央: 巻き上がり具合の数字。魚のシルエットは上の海の絵が受け持つ
+  reelCtx.textAlign = "center"; reelCtx.textBaseline = "middle";
+  reelCtx.fillStyle = intensity > 0.55 ? "#ff5c5c" : "rgba(255,255,255,.95)";
+  reelCtx.font = "bold " + Math.round(w*0.16) + "px sans-serif";
+  reelCtx.fillText(Math.round(gauge) + "%", 0, 0);
 
   // ハンドル(指で追いかける玉)
   const hx = Math.cos(reelSpin)*R, hy = Math.sin(reelSpin)*R;
@@ -2430,9 +2452,9 @@ function beginReeling(){
   fishLastFrameTime = fishReelStart;
   fishReelPhase = Math.random()*Math.PI*2;
   reelAngle = 0; reelSpin = -Math.PI/2; reelDragging = false;
-  document.querySelector("#screen-fish .mini-canvas-wrap").classList.add("hide");
+  document.getElementById("screen-fish").classList.add("reeling");
   document.getElementById("reelArea").classList.add("show");
-  sizeReelDial();
+  layoutReel();
   const msgEl = document.getElementById("fishMsg");
   msgEl.textContent = I18N[state.lang].reelMsg;
   msgEl.classList.add("urgent");
@@ -2471,6 +2493,7 @@ function fishLoop(now){
     const rate = currentDecayRate(fight, elapsedSec);
     const intensity = fight.amp > 0 ? Math.max(0, Math.min(1, (rate - (fight.base-fight.amp)) / (fight.amp*2))) : 0;
     fishGauge = Math.max(0, Math.min(100, fishGauge - rate*dt));
+    drawFightScene(intensity);
     drawReelDial(intensity, fishGauge);
     if(fishGauge >= 100){ endFishing(true); return; }
     if(fishGauge <= 0 || now - fishReelStart > REEL_TIMEOUT){ endFishing(false, "struggle"); return; }
@@ -2490,7 +2513,7 @@ function startFishing(){
   document.getElementById("fishResultActions").style.display = "none";
   document.getElementById("btnFishCancel").style.display = "inline-block";
   document.getElementById("reelArea").classList.remove("show");
-  document.querySelector("#screen-fish .mini-canvas-wrap").classList.remove("hide");
+  document.getElementById("screen-fish").classList.remove("reeling");
   if(fishAnim) cancelAnimationFrame(fishAnim);
   fishAnim = requestAnimationFrame(fishLoop);
 }
@@ -2500,6 +2523,7 @@ function endFishing(success, reason){
   fishState = "idle";
   reelDragging = false;
   document.getElementById("reelArea").classList.remove("show");
+  document.getElementById("screen-fish").classList.remove("reeling");
   const dict = I18N[state.lang];
   const msgEl = document.getElementById("fishMsg");
   msgEl.classList.remove("urgent");
@@ -2539,7 +2563,7 @@ document.getElementById("btnFishCancel").addEventListener("click", ()=>{
   fishState = "idle";
   reelDragging = false;
   document.getElementById("reelArea").classList.remove("show");
-  document.querySelector("#screen-fish .mini-canvas-wrap").classList.remove("hide");
+  document.getElementById("screen-fish").classList.remove("reeling");
   showScreen("screen-map");
 });
 document.getElementById("btnFishBack").addEventListener("click", ()=> showScreen("screen-map"));
