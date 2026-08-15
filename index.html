@@ -575,7 +575,7 @@ const SPECIES_INFO = {
   hirame:{type:"flatfish", color:"#c9a06a", accent:"#8a6a3d"},
   sazae:{type:"shell", color:"#d98a3d", accent:"#a85f22"},
   awabi:{type:"abalone", color:"#7fa89b", accent:"#3f5f57"},
-  ebi:{type:"shrimp", color:"#ff8f6b", accent:"#d85a36"},
+  ebi:{type:"shrimp", color:"#f7f5f0", accent:"#6f7b88", scale:0.78},   // 白っぽく、イセエビより小さく表示(図鑑の白いカードで埋もれないよう輪郭は濃いめ)
   ise:{type:"shrimp", color:"#ff6b6b", accent:"#c23458", spiny:true}
 };
 
@@ -590,6 +590,9 @@ function drawSpeciesGraphic(ctx, w, h, key, silhouette){
   const accent = silhouette ? "#8c959c" : info.accent;
   ctx.save();
   ctx.translate(w/2, h/2);
+  // SPECIES_INFO に scale があれば、その種類だけ大きさを変えて描く
+  // (クルマエビをイセエビより小さく見せるため。図鑑・釣り上げ演出・カゴの演出すべてに効く)
+  if(info.scale) ctx.scale(info.scale, info.scale);
   if(info.type === "fish" || info.type === "flatfish"){
     const bw = w*0.34, bh = info.type==="flatfish" ? h*0.24 : h*0.19;
     ctx.fillStyle = main;
