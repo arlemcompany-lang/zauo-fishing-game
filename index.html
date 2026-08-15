@@ -264,6 +264,19 @@
   /* 言語バーに隠れないよう各画面を下げる(既存の padding 指定より後に置いて上書きする) */
   .screen{padding-top:calc(var(--langbar-h) + 4px);}
   #screen-map{padding-top:calc(var(--langbar-h) + 4px);}
+
+  /* ---- リール(釣りの引き寄せ) ---- */
+  #reelArea{
+    display:none; touch-action:none; margin-top:6px;
+    align-items:center; justify-content:center;
+  }
+  #reelArea.show{display:flex;}
+  #reelDial{display:block; width:150px; height:150px; touch-action:none;}
+  /* 画面の低い端末では釣りの絵とリールが両方入るよう絵を少し小さくする */
+  @media (max-height:700px){
+    #fishCanvas{width:216px; height:216px;}
+    #reelDial{width:134px; height:134px;}
+  }
 </style>
 </head>
 <body>
@@ -371,6 +384,8 @@
     <h1 class="title" data-i18n="fishTitle"></h1>
     <div class="mini-canvas-wrap"><canvas id="fishCanvas" width="280" height="280"></canvas></div>
     <div class="mini-msg" id="fishMsg"></div>
+    <!-- リール: 指でぐるぐるなぞって巻き上げる。引き寄せ中だけ出す -->
+    <div id="reelArea"><canvas id="reelDial" width="260" height="260"></canvas></div>
     <div class="nav-row" id="fishResultActions" style="display:none;">
       <button class="big-btn" id="btnFishRetry" data-i18n="retryBtn"></button>
       <button class="ghost-btn" id="btnFishBack" data-i18n="back"></button>
@@ -419,7 +434,7 @@ const I18N = {
     zukanBtn:"ずかん", zukanTitle:"ずかん", completeMsg:"ぜんぶコンプリート！すごい！",
     fishTitle:"つりだ！", fishWaitMsg:"まっててね…", fishNowMsg:"いま！タップ！",
     fishFailEarlyMsg:"はやすぎ！にげられちゃった…", fishFailLateMsg:"おそかった！にげられちゃった…",
-    reelMsg:"れんぞくタップ！ひっぱって！", fishFailStruggleMsg:"つよくひっぱられて、にげられちゃった…",
+    hitMsg:"ヒット！", reelMsg:"ぐるぐる まわして！", fishFailStruggleMsg:"つよくひっぱられて、にげられちゃった…",
     gotItemTemplate:"{name} ゲット！", retryBtn:"もういちど",
     peekTitle:"たからさがし", peekInstruction:"ひかってるところをタップ！"
   },
@@ -435,7 +450,7 @@ const I18N = {
     zukanBtn:"Encyclopedia", zukanTitle:"Encyclopedia", completeMsg:"You collected them all! Amazing!",
     fishTitle:"Fishing Time!", fishWaitMsg:"Wait for it…", fishNowMsg:"Now! Tap!",
     fishFailEarlyMsg:"Too early! It got away…", fishFailLateMsg:"Too late! It got away…",
-    reelMsg:"Tap fast! Reel it in!", fishFailStruggleMsg:"It pulled free and got away…",
+    hitMsg:"HIT!", reelMsg:"Spin the reel!", fishFailStruggleMsg:"It pulled free and got away…",
     gotItemTemplate:"You got a {name}!", retryBtn:"Try Again",
     peekTitle:"Treasure Hunt", peekInstruction:"Tap the glowing spot!"
   },
@@ -451,7 +466,7 @@ const I18N = {
     zukanBtn:"图鉴", zukanTitle:"图鉴", completeMsg:"全部收集完成！太棒了！",
     fishTitle:"钓鱼时间！", fishWaitMsg:"等一下…", fishNowMsg:"就是现在！点击！",
     fishFailEarlyMsg:"太早了！被它跑掉了…", fishFailLateMsg:"太晚了！被它跑掉了…",
-    reelMsg:"快速点击！用力拉！", fishFailStruggleMsg:"它用力挣脱跑掉了…",
+    hitMsg:"上钩了！", reelMsg:"转动卷线器！", fishFailStruggleMsg:"它用力挣脱跑掉了…",
     gotItemTemplate:"获得了{name}！", retryBtn:"再来一次",
     peekTitle:"寻宝", peekInstruction:"点击发光的地方！"
   },
@@ -467,7 +482,7 @@ const I18N = {
     zukanBtn:"도감", zukanTitle:"도감", completeMsg:"모두 모았어요! 대단해요!",
     fishTitle:"낚시 시간!", fishWaitMsg:"기다려 봐요…", fishNowMsg:"지금! 탭!",
     fishFailEarlyMsg:"너무 빨랐어요! 놓쳤어요…", fishFailLateMsg:"너무 늦었어요! 놓쳤어요…",
-    reelMsg:"빠르게 탭! 잡아당겨요!", fishFailStruggleMsg:"세게 당겨서 놓쳤어요…",
+    hitMsg:"히트!", reelMsg:"릴을 돌려요!", fishFailStruggleMsg:"세게 당겨서 놓쳤어요…",
     gotItemTemplate:"{name} 획득!", retryBtn:"다시하기",
     peekTitle:"보물찾기", peekInstruction:"빛나는 곳을 탭하세요!"
   },
@@ -483,7 +498,7 @@ const I18N = {
     zukanBtn:"Enciclopedia", zukanTitle:"Enciclopedia", completeMsg:"¡Los conseguiste todos! ¡Increíble!",
     fishTitle:"¡Hora de pescar!", fishWaitMsg:"Espera…", fishNowMsg:"¡Ahora! ¡Toca!",
     fishFailEarlyMsg:"¡Demasiado pronto! Se escapó…", fishFailLateMsg:"¡Demasiado tarde! Se escapó…",
-    reelMsg:"¡Toca rápido! ¡Tira de la caña!", fishFailStruggleMsg:"¡Tiró fuerte y se escapó!",
+    hitMsg:"¡PICÓ!", reelMsg:"¡Gira el carrete!", fishFailStruggleMsg:"¡Tiró fuerte y se escapó!",
     gotItemTemplate:"¡Conseguiste {name}!", retryBtn:"Otra vez",
     peekTitle:"Búsqueda del tesoro", peekInstruction:"¡Toca el punto brillante!"
   },
@@ -499,7 +514,7 @@ const I18N = {
     zukanBtn:"Enciclopedia", zukanTitle:"Enciclopedia", completeMsg:"Li hai presi tutti! Fantastico!",
     fishTitle:"Ora di pesca!", fishWaitMsg:"Aspetta…", fishNowMsg:"Ora! Tocca!",
     fishFailEarlyMsg:"Troppo presto! È scappato…", fishFailLateMsg:"Troppo tardi! È scappato…",
-    reelMsg:"Tocca veloce! Tira su!", fishFailStruggleMsg:"Ha tirato forte ed è scappato…",
+    hitMsg:"ABBOCCATO!", reelMsg:"Gira il mulinello!", fishFailStruggleMsg:"Ha tirato forte ed è scappato…",
     gotItemTemplate:"Hai preso: {name}!", retryBtn:"Ancora",
     peekTitle:"Caccia al tesoro", peekInstruction:"Tocca il punto che brilla!"
   },
@@ -515,7 +530,7 @@ const I18N = {
     zukanBtn:"Bách khoa", zukanTitle:"Bách khoa", completeMsg:"Bạn đã sưu tập đủ tất cả! Tuyệt vời!",
     fishTitle:"Giờ câu cá!", fishWaitMsg:"Chờ chút nhé…", fishNowMsg:"Ngay bây giờ! Chạm!",
     fishFailEarlyMsg:"Quá sớm! Nó chạy mất rồi…", fishFailLateMsg:"Quá muộn! Nó chạy mất rồi…",
-    reelMsg:"Chạm liên tục! Kéo lên!", fishFailStruggleMsg:"Nó giật mạnh và trốn mất…",
+    hitMsg:"DÍNH RỒI!", reelMsg:"Quay máy câu!", fishFailStruggleMsg:"Nó giật mạnh và trốn mất…",
     gotItemTemplate:"Bạn đã bắt được {name}!", retryBtn:"Thử lại",
     peekTitle:"Săn kho báu", peekInstruction:"Chạm vào chỗ phát sáng!"
   },
@@ -531,7 +546,7 @@ const I18N = {
     zukanBtn:"Ensiklopedya", zukanTitle:"Ensiklopedya", completeMsg:"Nakuha mo lahat! Ang galing!",
     fishTitle:"Oras ng Pangingisda!", fishWaitMsg:"Maghintay ka…", fishNowMsg:"Ngayon na! I-tap!",
     fishFailEarlyMsg:"Masyadong maaga! Nakatakas ito…", fishFailLateMsg:"Huli na! Nakatakas ito…",
-    reelMsg:"Mabilis na i-tap! Hilahin mo!", fishFailStruggleMsg:"Humila ito nang malakas at nakatakas…",
+    hitMsg:"KAGAT!", reelMsg:"Paikutin ang reel!", fishFailStruggleMsg:"Humila ito nang malakas at nakatakas…",
     gotItemTemplate:"Nakuha mo ang {name}!", retryBtn:"Ulitin",
     peekTitle:"Paghahanap ng Kayamanan", peekInstruction:"I-tap ang kumikislap na lugar!"
   }
@@ -2050,6 +2065,14 @@ let fishAnim = null;
 let fishState = "idle";
 let fishWaitStart = 0, fishWaitDuration = 0, fishBiteStart = 0;
 let fishGauge = 0, fishPendingKey = null, fishLastFrameTime = 0, fishReelStart = 0, fishReelPhase = 0;
+let fishHitStart = 0;                 // 「ヒット！」を見せている間
+const HIT_SHOW_MS = 800;
+/* リール(指でぐるぐるなぞる)の状態。
+   reelAngle   … 巻き取った量の合計(ラジアン)。見た目の回転にも使う
+   reelLastAng … 直前に指があった角度。差分の絶対値を巻き取り量として足す
+   1回転(2π)で fight.gain * ROT_GAIN_MULT ぶんゲージが増える */
+const ROT_GAIN_MULT = 2;
+let reelDragging = false, reelLastAng = 0, reelAngle = 0, reelSpin = 0;
 
 function drawFishScene(bobY, showExclaim){
   const w = fishCanvas.width, h = fishCanvas.height;
@@ -2078,6 +2101,35 @@ function drawFishScene(bobY, showExclaim){
     fishCtx.fillStyle = "#fff176"; fishCtx.font = "bold 34px sans-serif"; fishCtx.textAlign = "center";
     fishCtx.fillText("！", lineX+30, bobY-14);
   }
+}
+
+/* 掛かった瞬間の「ヒット！」。文字だけだと気づきにくいので、
+   ウキのまわりに広がる波紋と一緒に大きく出す */
+function drawHitScene(t){
+  const w = fishCanvas.width, h = fishCanvas.height;
+  drawFishScene(140, false);
+  const cx = w/2, cy = 140;
+  fishCtx.strokeStyle = "rgba(255,255,255," + Math.max(0, 1-t) + ")";
+  fishCtx.lineWidth = 3;
+  for(let i=0;i<3;i++){
+    const rad = (t + i*0.3) * 90;
+    if(rad <= 0 || rad > 130) continue;
+    fishCtx.beginPath();
+    fishCtx.ellipse(cx, cy, rad, rad*0.4, 0, 0, Math.PI*2);
+    fishCtx.stroke();
+  }
+  const pop = t < 0.25 ? t/0.25 : 1;
+  const scale = 0.6 + 0.55*Math.min(1, pop*1.25) - (t>0.8 ? (t-0.8)*0.3 : 0);
+  fishCtx.save();
+  fishCtx.translate(cx, h*0.34);
+  fishCtx.scale(scale, scale);
+  fishCtx.textAlign = "center"; fishCtx.textBaseline = "middle";
+  fishCtx.font = "bold 46px sans-serif";
+  fishCtx.lineWidth = 8; fishCtx.strokeStyle = "#c23458";
+  fishCtx.strokeText(I18N[state.lang].hitMsg, 0, 0);
+  fishCtx.fillStyle = "#fff176";
+  fishCtx.fillText(I18N[state.lang].hitMsg, 0, 0);
+  fishCtx.restore();
 }
 
 function currentDecayRate(fight, elapsedSec){
@@ -2243,13 +2295,132 @@ function playCatchReveal(key, onDone){
   fishAnim = requestAnimationFrame(frame);
 }
 
+/* リールの円。指でなぞる輪・回るハンドル・回す向きの矢印を描く。
+   intensity(魚が強く引いている度合い)が高いと赤くなり、輪が震える */
+const reelDial = document.getElementById("reelDial");
+const reelCtx = reelDial.getContext("2d");
+
+function drawReelDial(intensity){
+  const w = reelDial.width, h = reelDial.height;
+  const cx = w/2, cy = h/2, R = w*0.34;
+  reelCtx.clearRect(0,0,w,h);
+
+  const shake = intensity*3;
+  reelCtx.save();
+  reelCtx.translate(cx + (Math.random()-0.5)*shake, cy + (Math.random()-0.5)*shake);
+
+  // なぞる輪(トラック)
+  reelCtx.strokeStyle = intensity > 0.55 ? "rgba(255,92,92,.9)" : "rgba(255,255,255,.85)";
+  reelCtx.lineWidth = w*0.13;
+  reelCtx.beginPath(); reelCtx.arc(0,0,R,0,Math.PI*2); reelCtx.stroke();
+  reelCtx.strokeStyle = "rgba(0,0,0,.15)";
+  reelCtx.lineWidth = 2;
+  reelCtx.beginPath(); reelCtx.arc(0,0,R,0,Math.PI*2); reelCtx.stroke();
+
+  // 回した量が分かるよう、輪の内側に刻みを入れて一緒に回す
+  reelCtx.save();
+  reelCtx.rotate(reelAngle);
+  reelCtx.strokeStyle = "rgba(30,111,168,.55)";
+  reelCtx.lineWidth = 3;
+  for(let i=0;i<12;i++){
+    const a = i*Math.PI/6;
+    reelCtx.beginPath();
+    reelCtx.moveTo(Math.cos(a)*R*0.78, Math.sin(a)*R*0.78);
+    reelCtx.lineTo(Math.cos(a)*R*0.92, Math.sin(a)*R*0.92);
+    reelCtx.stroke();
+  }
+  reelCtx.restore();
+
+  // 中心の軸
+  reelCtx.fillStyle = "#1e6fa8";
+  reelCtx.beginPath(); reelCtx.arc(0,0,R*0.26,0,Math.PI*2); reelCtx.fill();
+  reelCtx.fillStyle = "rgba(255,255,255,.35)";
+  reelCtx.beginPath(); reelCtx.arc(-R*0.07,-R*0.07,R*0.11,0,Math.PI*2); reelCtx.fill();
+
+  // ハンドル(指で追いかける玉)
+  const hx = Math.cos(reelSpin)*R, hy = Math.sin(reelSpin)*R;
+  reelCtx.strokeStyle = "#1e6fa8"; reelCtx.lineWidth = w*0.045;
+  reelCtx.beginPath(); reelCtx.moveTo(0,0); reelCtx.lineTo(hx,hy); reelCtx.stroke();
+  reelCtx.fillStyle = "#ff9f43";
+  reelCtx.beginPath(); reelCtx.arc(hx,hy,w*0.075,0,Math.PI*2); reelCtx.fill();
+  reelCtx.strokeStyle = "#fff"; reelCtx.lineWidth = 3;
+  reelCtx.beginPath(); reelCtx.arc(hx,hy,w*0.075,0,Math.PI*2); reelCtx.stroke();
+
+  // まわす向きの矢印(指を置いていない間だけ点滅させて誘導する)
+  if(!reelDragging){
+    const blink = 0.35 + 0.35*Math.sin(performance.now()/260);
+    reelCtx.strokeStyle = "rgba(255,255,255," + blink + ")";
+    reelCtx.lineWidth = 4;
+    for(let k=0;k<2;k++){
+      const a0 = k*Math.PI + 0.35, a1 = a0 + 0.9;
+      reelCtx.beginPath(); reelCtx.arc(0,0,R*1.30,a0,a1); reelCtx.stroke();
+      const ax = Math.cos(a1)*R*1.30, ay = Math.sin(a1)*R*1.30;
+      reelCtx.beginPath();
+      reelCtx.moveTo(ax,ay);
+      reelCtx.lineTo(ax - Math.cos(a1-0.6)*9, ay - Math.sin(a1-0.6)*9);
+      reelCtx.moveTo(ax,ay);
+      reelCtx.lineTo(ax - Math.cos(a1+0.35)*9, ay - Math.sin(a1+0.35)*9);
+      reelCtx.stroke();
+    }
+  }
+  reelCtx.restore();
+}
+
+/* 指の位置から円の中心まわりの角度を求める */
+function reelAngleAt(ev){
+  const r = reelDial.getBoundingClientRect();
+  return Math.atan2(ev.clientY - (r.top + r.height/2), ev.clientX - (r.left + r.width/2));
+}
+
+reelDial.addEventListener("pointerdown", (ev)=>{
+  if(fishState !== "reeling") return;
+  ev.preventDefault();
+  reelDragging = true;
+  reelLastAng = reelAngleAt(ev);
+  reelDial.setPointerCapture(ev.pointerId);
+});
+reelDial.addEventListener("pointermove", (ev)=>{
+  if(!reelDragging || fishState !== "reeling") return;
+  ev.preventDefault();
+  const a = reelAngleAt(ev);
+  // -π〜πをまたぐので、差は必ず近いほうを取る
+  let d = a - reelLastAng;
+  while(d > Math.PI) d -= Math.PI*2;
+  while(d < -Math.PI) d += Math.PI*2;
+  reelLastAng = a;
+  reelSpin = a;
+  reelAngle += d;
+  // 巻く向きはどちらでもよい(子供が迷わないように)。回した量ぶんゲージが増える
+  const fight = FISH_FIGHT[fishPendingKey];
+  fishGauge = Math.min(100, fishGauge + (Math.abs(d)/(Math.PI*2)) * fight.gain * ROT_GAIN_MULT);
+  if(fishGauge >= 100) endFishing(true);
+});
+function reelRelease(ev){
+  if(!reelDragging) return;
+  reelDragging = false;
+  try{ reelDial.releasePointerCapture(ev.pointerId); }catch(e){}
+}
+reelDial.addEventListener("pointerup", reelRelease);
+reelDial.addEventListener("pointercancel", reelRelease);
+
+function beginHit(){
+  fishState = "hit";
+  fishHitStart = performance.now();
+  fishPendingKey = weightedPick(FISH_TABLE);
+  const msgEl = document.getElementById("fishMsg");
+  msgEl.textContent = I18N[state.lang].hitMsg;
+  msgEl.classList.add("urgent");
+}
+
 function beginReeling(){
   fishState = "reeling";
-  fishPendingKey = weightedPick(FISH_TABLE);
+  // 魚の種類は掛かった瞬間(beginHit)にすでに決まっている
   fishGauge = REEL_START_GAUGE;
   fishReelStart = performance.now();
   fishLastFrameTime = fishReelStart;
   fishReelPhase = Math.random()*Math.PI*2;
+  reelAngle = 0; reelSpin = -Math.PI/2; reelDragging = false;
+  document.getElementById("reelArea").classList.add("show");
   const msgEl = document.getElementById("fishMsg");
   msgEl.textContent = I18N[state.lang].reelMsg;
   msgEl.classList.add("urgent");
@@ -2275,6 +2446,11 @@ function fishLoop(now){
       return;
     }
     fishAnim = requestAnimationFrame(fishLoop);
+  } else if(fishState === "hit"){
+    const t = (now - fishHitStart) / HIT_SHOW_MS;
+    drawHitScene(Math.min(1, t));
+    if(t >= 1){ beginReeling(); }
+    fishAnim = requestAnimationFrame(fishLoop);
   } else if(fishState === "reeling"){
     const dt = (now - fishLastFrameTime) / 1000;
     fishLastFrameTime = now;
@@ -2284,6 +2460,7 @@ function fishLoop(now){
     const intensity = fight.amp > 0 ? Math.max(0, Math.min(1, (rate - (fight.base-fight.amp)) / (fight.amp*2))) : 0;
     fishGauge = Math.max(0, Math.min(100, fishGauge - rate*dt));
     drawReelScene(fishGauge, intensity);
+    drawReelDial(intensity);
     if(fishGauge >= 100){ endFishing(true); return; }
     if(fishGauge <= 0 || now - fishReelStart > REEL_TIMEOUT){ endFishing(false, "struggle"); return; }
     fishAnim = requestAnimationFrame(fishLoop);
@@ -2301,6 +2478,7 @@ function startFishing(){
   msgEl.classList.remove("urgent");
   document.getElementById("fishResultActions").style.display = "none";
   document.getElementById("btnFishCancel").style.display = "inline-block";
+  document.getElementById("reelArea").classList.remove("show");
   if(fishAnim) cancelAnimationFrame(fishAnim);
   fishAnim = requestAnimationFrame(fishLoop);
 }
@@ -2308,6 +2486,8 @@ function startFishing(){
 function endFishing(success, reason){
   if(fishAnim) cancelAnimationFrame(fishAnim);
   fishState = "idle";
+  reelDragging = false;
+  document.getElementById("reelArea").classList.remove("show");
   const dict = I18N[state.lang];
   const msgEl = document.getElementById("fishMsg");
   msgEl.classList.remove("urgent");
@@ -2333,18 +2513,20 @@ function endFishing(success, reason){
   }
 }
 
-fishCanvas.addEventListener("pointerdown", ()=>{
+/* あたりが来たら画面のどこをタップしてもヒットにする(ウキを狙わせない)。
+   引き寄せはリールの円をなぞる操作なので、ここでは扱わない。
+   下部のボタンとリールの上でのタップは、それぞれの操作を邪魔しないよう除外する */
+document.getElementById("screen-fish").addEventListener("pointerdown", (ev)=>{
+  if(ev.target.closest("button") || ev.target.closest("#reelArea")) return;
   if(fishState === "waiting") endFishing(false, "early");
-  else if(fishState === "bite") beginReeling();
-  else if(fishState === "reeling"){
-    fishGauge = Math.min(100, fishGauge + FISH_FIGHT[fishPendingKey].gain);
-    if(fishGauge >= 100) endFishing(true);
-  }
+  else if(fishState === "bite") beginHit();
 });
 
 document.getElementById("btnFishCancel").addEventListener("click", ()=>{
   if(fishAnim) cancelAnimationFrame(fishAnim);
   fishState = "idle";
+  reelDragging = false;
+  document.getElementById("reelArea").classList.remove("show");
   showScreen("screen-map");
 });
 document.getElementById("btnFishBack").addEventListener("click", ()=> showScreen("screen-map"));
