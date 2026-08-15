@@ -2599,15 +2599,18 @@ function startPeek(){
   msgEl.textContent = I18N[state.lang].peekInstruction;
   const wrap = document.getElementById("peekWrap");
   wrap.querySelectorAll(".glow-spot").forEach(e=> e.remove());
+  // 光るポイントは5か所(オーナー指示で3→5)。数を増やしたぶん、
+  // 重ならない最小の間隔を22%→17%にゆるめ、置き直しの試行回数も増やしてある
   const used = [];
-  for(let i=0;i<3;i++){
+  const PEEK_SPOTS = 5;
+  for(let i=0;i<PEEK_SPOTS;i++){
     let x,y,ok;
     let tries = 0;
     do{
       x = 12 + Math.random()*76; y = 12 + Math.random()*76; ok = true;
-      for(const u of used){ if(Math.hypot(u.x-x, u.y-y) < 22) ok = false; }
+      for(const u of used){ if(Math.hypot(u.x-x, u.y-y) < 17) ok = false; }
       tries++;
-    } while(!ok && tries < 30);
+    } while(!ok && tries < 80);
     used.push({x,y});
     const btn = document.createElement("button");
     btn.className = "glow-spot";
