@@ -594,7 +594,7 @@ const SPECIES_INFO = {
   sazae:{type:"shell", color:"#d98a3d", accent:"#a85f22"},
   awabi:{type:"abalone", color:"#7fa89b", accent:"#3f5f57"},
   ebi:{type:"shrimp", color:"#f7f5f0", accent:"#6f7b88", scale:0.78},   // 白っぽく、イセエビより小さく表示(図鑑の白いカードで埋もれないよう輪郭は濃いめ)
-  ise:{type:"shrimp", color:"#ff6b6b", accent:"#c23458", spiny:true}
+  ise:{type:"shrimp", color:"#ff6b6b", accent:"#c23458", spiny:true, scale:1.2}  // オーナー指示で大きく(クルマエビの約1.55倍)
 };
 
 function drawSpeciesIcon(ctx, w, h, key, silhouette){
@@ -686,6 +686,9 @@ function drawSpeciesGraphic(ctx, w, h, key, silhouette){
     const R = w*0.21, segs = 7;
     const a0 = Math.PI*0.85, a1 = Math.PI*1.85;   // a0=頭 a1=尾
     const pt = (a)=> [Math.cos(a)*R, Math.sin(a)*R];
+    // 頭のヒゲが左に長く出るぶん絵が左に寄っている。少し右へずらして見た目の中心をマスの中心に合わせる
+    // (これをしないと scale を上げたときに図鑑のマスからヒゲがはみ出して切れる)
+    ctx.translate(w*0.085, 0);
 
     // 脚(腹側=円弧の内側)
     if(!silhouette){
@@ -741,8 +744,8 @@ function drawSpeciesGraphic(ctx, w, h, key, silhouette){
     for(let k=0;k<2;k++){
       ctx.beginPath();
       ctx.moveTo(hx,hy);
-      ctx.quadraticCurveTo(hx-w*0.17, hy+w*0.13+k*w*0.08,
-                           hx-w*0.33, hy+w*0.04+k*w*0.15);
+      ctx.quadraticCurveTo(hx-w*0.15, hy+w*0.12+k*w*0.07,
+                           hx-w*0.29, hy+w*0.04+k*w*0.13);
       ctx.stroke();
     }
     ctx.lineCap = "butt";
@@ -2052,8 +2055,15 @@ const fishCtx = fishCanvas.getContext("2d");
 const FISH_BITE_WINDOW = 900;
 const REEL_START_GAUGE = 10;
 /* 巻きはじめの猶予。開始が10%と低いので、指を円に置くまでの一瞬で
-   ゲージが0になって即失敗する事故を防ぐため、最初のこの時間だけ魚は引かない */
-const REEL_GRACE_MS = 1200;
+   ゲージが0になって即失敗する事故を防ぐため、最初のこの時間だけ魚は引かない。
+   引きを強くした(FISH_FIGHT の base を上げた)ぶん、指を置くまでの余裕も 1.2→1.8秒に延ばしてある */
+const REEL_GRACE_MS = 1800;
+/* 手が止まっている間は、さらにこの倍率でゲージが下がる(オーナー指示 2026-08-16)。
+   「回していないとみるみる減る」手ごたえを出すのが目的。
+   巻いている限りは倍率がかからないので、ゆっくり巻く子が損をすることはない。
+   最初の1回転を始めるまでは適用しない(始める前に落ちきってしまうのを防ぐため) */
+const REEL_IDLE_MS   = 500;   /* 指を置き直す一瞬で罰を受けないよう、少し余裕を持たせている */
+const REEL_IDLE_MULT = 1.8;
 const REEL_TIMEOUT = 90000;   /* 巻く回数を増やしたぶん延ばす。base<gain なので巻き続けている限り
                                  ゲージは前に進む。時間切れは「手が止まった子」への区切りという位置づけで、
                                  ゆっくり巻いた実測(最長シマアジ約50秒)に対して十分な余裕を取ってある */
@@ -2065,14 +2075,21 @@ const REEL_TIMEOUT = 90000;   /* 巻く回数を増やしたぶん延ばす。ba
    連打式だった頃は1タップぶんの値で、1秒に何回も入力できる前提の数字だった。
    リール式は入力の速さが指の回転(1秒に1〜2回転)に制限されるため、
    オーナー指示「巻く回数をグンと増やす」に合わせて base(引きの強さ)ごと組み直してある。
-   実測の目安(10%→100%まで): 1回転/秒でアジ約18回転〜シマアジ約36回転。
-   base を gain より十分小さくしてあるのは、ゆっくり巻く小さい子でも必ず前に進むようにするため */
+
+   2026-08-16 オーナー指示「回さないときに下がるスピードをもっと早く」で base を 1.4〜2.75倍に上げた。
+   ただし base だけ上げると必要な回転数まで増えてしまうので、gain も同じだけ上げて
+   **1回転あたりの正味の進み(gain - base)は据え置き**にしてある。
+   実測の目安(10%→100%まで、1回転/秒): アジ16.4 / カサゴ19.6 / タイ・ヒラメ23.7 / シマアジ31回転(変更前と同じ)。
+
+   base / gain の比 = 「これより遅く巻くと前に進めなくなる回転速度」。
+   全魚とも 0.50〜0.55 に収めてあり、1秒に半回転でも必ず前に進む。
+   **この比を 0.6 より上げないこと**。ゆっくり巻く小さい子が永久に釣れなくなる(過去にやらかした) */
 const FISH_FIGHT = {
-  aji:      { gain:7.5, base:2.0, amp:0,   period:1.0 },
-  kasago:   { gain:6.8, base:2.2, amp:2,   period:1.6 },
-  tai:      { gain:6.2, base:2.4, amp:3.5, period:1.3 },
-  hirame:   { gain:6.2, base:2.4, amp:3.5, period:1.1 },
-  shimaaji: { gain:5.5, base:2.6, amp:4.5, period:0.9 }
+  aji:      { gain:11.0, base:5.5, amp:0,   period:1.0 },
+  kasago:   { gain:9.6,  base:5.0, amp:3.8, period:1.6 },
+  tai:      { gain:8.2,  base:4.4, amp:5.4, period:1.3 },
+  hirame:   { gain:8.2,  base:4.4, amp:5.4, period:1.1 },
+  shimaaji: { gain:6.5,  base:3.6, amp:5.8, period:0.9 }
 };
 /* レア度が高いほど跳ねる演出を派手にする(ジャンプの高さ・キラキラの数) */
 const FISH_RARITY = { aji:1, kasago:2, tai:3, hirame:3, shimaaji:4 };
@@ -2088,6 +2105,9 @@ const HIT_SHOW_MS = 800;
    1回転(2π)で fight.gain ぶんゲージが増える */
 const ROT_GAIN_MULT = 1;   // gain がそのまま「1回転ぶん」
 let reelDragging = false, reelLastAng = 0, reelAngle = 0, reelSpin = 0;
+/* reelLastInputMs … 最後に指を動かした時刻。ここから REEL_IDLE_MS 以上あくと「手が止まった」扱い
+   reelStarted    … 一度でも巻いたか。巻き始める前は止まった扱いにしない */
+let reelLastInputMs = 0, reelStarted = false;
 
 function drawFishScene(bobY, showExclaim){
   const w = fishCanvas.width, h = fishCanvas.height;
@@ -2413,6 +2433,7 @@ reelDial.addEventListener("pointerdown", (ev)=>{
   ev.preventDefault();
   reelDragging = true;
   reelLastAng = reelAngleAt(ev);
+  reelLastInputMs = performance.now();
   reelDial.setPointerCapture(ev.pointerId);
 });
 reelDial.addEventListener("pointermove", (ev)=>{
@@ -2426,6 +2447,8 @@ reelDial.addEventListener("pointermove", (ev)=>{
   reelLastAng = a;
   reelSpin = a;
   reelAngle += d;
+  // 実際に回した時だけ「動いている」とみなす(指を置いたまま止めていたら止まった扱い)
+  if(Math.abs(d) > 0.01){ reelLastInputMs = performance.now(); reelStarted = true; }
   // 巻く向きはどちらでもよい(子供が迷わないように)。回した量ぶんゲージが増える
   const fight = FISH_FIGHT[fishPendingKey];
   fishGauge = Math.min(100, fishGauge + (Math.abs(d)/(Math.PI*2)) * fight.gain * ROT_GAIN_MULT);
@@ -2456,6 +2479,7 @@ function beginReeling(){
   fishLastFrameTime = fishReelStart;
   fishReelPhase = Math.random()*Math.PI*2;
   reelAngle = 0; reelSpin = -Math.PI/2; reelDragging = false;
+  reelStarted = false; reelLastInputMs = fishReelStart;
   document.getElementById("screen-fish").classList.add("reeling");
   document.getElementById("reelArea").classList.add("show");
   layoutReel();
@@ -2495,8 +2519,13 @@ function fishLoop(now){
     const fight = FISH_FIGHT[fishPendingKey];
     const elapsedSec = (now - fishReelStart) / 1000;
     // 巻きはじめの猶予中は魚が引かない(指を円に置く時間を作る)
-    const rate = (now - fishReelStart < REEL_GRACE_MS) ? 0 : currentDecayRate(fight, elapsedSec);
-    const intensity = fight.amp > 0 ? Math.max(0, Math.min(1, (rate - (fight.base-fight.amp)) / (fight.amp*2))) : 0;
+    let rate = (now - fishReelStart < REEL_GRACE_MS) ? 0 : currentDecayRate(fight, elapsedSec);
+    // 手が止まっている間はさらに速く下がる(巻いている間は倍率をかけない)
+    const idle = reelStarted && rate > 0 && (now - reelLastInputMs > REEL_IDLE_MS);
+    if(idle) rate *= REEL_IDLE_MULT;
+    let intensity = fight.amp > 0 ? Math.max(0, Math.min(1, (rate - (fight.base-fight.amp)) / (fight.amp*2))) : 0;
+    // 止まっているあいだはゲージを赤くして「回して！」と伝える(アジは amp:0 なので明示的に上げる)
+    if(idle) intensity = Math.max(intensity, 0.85);
     fishGauge = Math.max(0, Math.min(100, fishGauge - rate*dt));
     drawFightScene(intensity);
     drawReelDial(intensity, fishGauge);
