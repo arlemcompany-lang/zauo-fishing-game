@@ -55,7 +55,7 @@
     background:rgba(255,255,255,.85); color:#555; border:none; border-radius:20px;
     padding:10px 24px; font-size:15px; font-weight:bold; margin:6px;
   }
-  .nav-row{display:flex; justify-content:center; margin-top:auto; padding-top:14px; flex-wrap:wrap;}
+  .nav-row{display:flex; justify-content:center; align-items:center; margin-top:auto; padding-top:14px; flex-wrap:wrap;}
 
   /* ---- キャラメイク ---- */
   .char-preview-wrap{
@@ -224,6 +224,12 @@
     box-shadow:0 3px 0 rgba(0,0,0,.15); opacity:.65;
   }
   .zukan-cell.owned{opacity:1; background:#fff;}
+  .zukan-cell{position:relative;}
+  .zukan-count{
+    position:absolute; top:4px; right:6px; min-width:26px; padding:2px 7px;
+    background:var(--accent); color:#fff; font-size:13px; font-weight:bold;
+    border-radius:12px; text-align:center; box-shadow:0 2px 0 #c9761f;
+  }
   .zukan-cell canvas{display:block;}
   .zukan-label{font-size:12px; font-weight:bold; color:#444; text-align:center;}
   .zukan-complete-badge{
@@ -347,6 +353,7 @@
       <button class="ghost-btn" id="btnSkipName" data-i18n="skip"></button>
     </div>
     <div class="nav-row">
+      <button class="ghost-btn" id="btnNameBack" data-i18n="back"></button>
       <button class="big-btn" id="btnNameNext" data-i18n="start"></button>
     </div>
   </div>
@@ -362,6 +369,7 @@
       <button class="big-btn" id="btnGoMap" data-i18n="goMap"></button>
     </div>
     <div class="nav-row" style="margin-top:0;">
+      <button class="ghost-btn" id="btnStartBack" data-i18n="back"></button>
       <button class="ghost-btn" id="btnRestart" data-i18n="backToTop"></button>
     </div>
   </div>
@@ -1453,7 +1461,8 @@ document.querySelectorAll("#langBar .lang-btn").forEach(btn=>{
 });
 
 document.getElementById("btnCharNext").addEventListener("click", ()=>{
-  state.name = "";
+  // 名前入力から「もどる」で戻ってきた場合も、入力済みの名前は消さない
+  // (「さいしょから」では state.name を空にしてからここへ来るので、初回は空のまま)
   renderName();
   buildKeyboardForLang();
   showScreen("screen-name");
@@ -1472,6 +1481,17 @@ document.getElementById("btnSkipName").addEventListener("click", ()=>{
 });
 
 document.getElementById("btnNameNext").addEventListener("click", goToStart);
+
+// キャラメイク中はいつでも1つ前の画面に戻れる。選んだキャラ・入力した名前はそのまま残す
+document.getElementById("btnNameBack").addEventListener("click", ()=>{
+  showScreen("screen-char");
+});
+document.getElementById("btnStartBack").addEventListener("click", ()=>{
+  // スタート確認中に言語を変えた場合に備えて、キーボードだけ今の言語で組み直す
+  buildKeyboardForLang();
+  renderName();
+  showScreen("screen-name");
+});
 
 document.getElementById("btnRestart").addEventListener("click", ()=>{
   // 画面遷移のみ。保存データは存在しないため、変数を初期化して最初へ
@@ -2007,6 +2027,13 @@ function buildZukanGrid(){
     c.width = 72; c.height = 72;
     drawSpeciesIcon(c.getContext("2d"), 72, 72, key, !owned);
     cell.appendChild(c);
+    if(owned){
+      // 獲った数(数字と×だけなので言語に依存しない)
+      const count = document.createElement("div");
+      count.className = "zukan-count";
+      count.textContent = "×" + state.collected[key];
+      cell.appendChild(count);
+    }
     const label = document.createElement("div");
     label.className = "zukan-label";
     label.textContent = owned ? FISH_NAMES[key][state.lang] : "？？？";
@@ -2564,7 +2591,7 @@ function endFishing(success, reason){
   document.getElementById("btnFishCancel").style.display = "none";
   if(success){
     const key = fishPendingKey;
-    state.collected[key] = true;
+    state.collected[key] = (state.collected[key] || 0) + 1;
     msgEl.textContent = "";
     document.getElementById("fishResultActions").style.display = "none";
     playCatchReveal(key, ()=>{
@@ -2744,7 +2771,7 @@ function handlePeekTap(){
   document.getElementById("peekWrap").querySelectorAll(".glow-spot").forEach(e=> e.remove());
   document.getElementById("btnPeekCancel").style.display = "none";
   const key = weightedPick(TREASURE_TABLES[state.kagoType] || TREASURE_TABLES.ebi);
-  state.collected[key] = true;
+  state.collected[key] = (state.collected[key] || 0) + 1;
   const dict = I18N[state.lang];
   // 獲物の姿を見せてから結果の文字とボタンを出す(金色フラッシュは演出側で出す)
   playPeekReveal(key, ()=>{
